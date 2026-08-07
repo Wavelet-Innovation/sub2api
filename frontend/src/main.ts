@@ -6,6 +6,7 @@ import i18n, { initI18n } from './i18n'
 import { useAppStore } from '@/stores/app'
 import { updateFavicon } from '@/utils/branding'
 import { isIOSDevice } from '@/utils/device'
+import { resolveSiteName } from '@/config/branding'
 import './style.css'
 
 function initIOSViewportZoomFix() {
@@ -45,9 +46,7 @@ async function bootstrap() {
   appStore.initFromInjectedConfig()
 
   // Set document title immediately after config is loaded
-  if (appStore.siteName && appStore.siteName !== 'Sub2API') {
-    document.title = `${appStore.siteName} - AI API Gateway`
-  }
+  document.title = resolveSiteName(appStore.siteName)
   updateFavicon(appStore.siteLogo)
 
   await initI18n()
