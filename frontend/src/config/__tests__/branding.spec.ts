@@ -5,6 +5,7 @@ import {
   DEFAULT_DOCUMENT_TITLE,
   DEFAULT_SITE_NAME,
   DEFAULT_SITE_SUBTITLE,
+  ORGANIZATION_GITHUB_URL,
   resolveSiteName,
 } from '@/config/branding'
 
@@ -28,5 +29,20 @@ describe('Wavelet Innovation branding defaults', () => {
     expect(indexHtml).toContain(`<title>${DEFAULT_DOCUMENT_TITLE}</title>`)
     expect(indexHtml).not.toContain('<title>Sub2API')
     expect(logoSvg).toContain(`<title id="title">${DEFAULT_SITE_NAME}</title>`)
+  })
+
+  it('points general website GitHub links to the Wavelet Innovation organization', () => {
+    expect(ORGANIZATION_GITHUB_URL).toBe('https://github.com/Wavelet-Innovation')
+
+    const linkSurfaces = [
+      'src/views/HomeView.vue',
+      'src/views/KeyUsageView.vue',
+      'src/components/layout/AppHeader.vue',
+    ].map((path) => readFileSync(resolve(process.cwd(), path), 'utf8'))
+
+    for (const source of linkSurfaces) {
+      expect(source).toContain('ORGANIZATION_GITHUB_URL')
+      expect(source).not.toContain('https://github.com/Wei-Shaw/sub2api')
+    }
   })
 })

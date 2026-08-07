@@ -155,7 +155,7 @@
 
                 <a
                   v-if="authStore.isAdmin"
-                  href="https://github.com/Wei-Shaw/sub2api"
+                  :href="ORGANIZATION_GITHUB_URL"
                   target="_blank"
                   rel="noopener noreferrer"
                   @click="closeDropdown"
@@ -250,6 +250,7 @@ import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMi
 import AnnouncementBell from '@/components/common/AnnouncementBell.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
+import { ORGANIZATION_GITHUB_URL } from '@/config/branding'
 
 const router = useRouter()
 const route = useRoute()

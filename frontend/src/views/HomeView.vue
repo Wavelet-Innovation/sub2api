@@ -411,7 +411,7 @@ import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeUrl } from '@/utils/url'
-import { resolveSiteName } from '@/config/branding'
+import { ORGANIZATION_GITHUB_URL, resolveSiteName } from '@/config/branding'
 
 const { t } = useI18n()
 
@@ -435,7 +435,7 @@ const isHomeContentUrl = computed(() => {
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
-const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
+const githubUrl = ORGANIZATION_GITHUB_URL
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
