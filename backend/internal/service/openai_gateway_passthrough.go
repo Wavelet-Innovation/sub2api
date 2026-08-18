@@ -79,6 +79,23 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 		if normalized {
 			body = normalizedBody
 		}
+
+		// 剥离 ChatGPT internal Codex 端点拒绝的采样参数。
+		//
+		// normalizeOpenAIPassthroughOAuthBody 只剥离元数据类字段
+		// （openAIChatGPTInternalUnsupportedFields），而 transform 路径额外剥离
+		// 6 个采样参数。Codex CLI 从不发它们所以长期没暴露，但标准 OpenAI 客户端
+		// 默认带 max_output_tokens，上游会返回
+		// 400 {"detail":"Unsupported parameter: max_output_tokens"}。
+		//
+		// 这不违背透传"不改语义"的初衷：这些参数对该端点本就无效，删除前后行为一致。
+		if strippedBody, stripped, stripErr := stripOpenAICodexPassthroughSamplingParams(body); stripErr != nil {
+			// 剥离失败不阻断请求：带着参数去撞上游 400，好过在这里把 body 改坏。
+			logger.FromContext(ctx).Warn("openai_passthrough.strip_sampling_params_failed",
+				zap.Int64("account_id", account.ID), zap.Error(stripErr))
+		} else if stripped {
+			body = strippedBody
+		}
 		reqStream = gjson.GetBytes(body, "stream").Bool()
 	}
 
