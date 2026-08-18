@@ -45,7 +45,8 @@ import { computed } from 'vue'
 import type { GroupPlatform } from '@/types'
 
 interface Props {
-  platform?: GroupPlatform
+  // 允许自定义透传服务名：模板末尾有未知平台的通用兜底图标
+  platform?: GroupPlatform | (string & {})
   size?: 'xs' | 'sm' | 'md' | 'lg'
 }
 

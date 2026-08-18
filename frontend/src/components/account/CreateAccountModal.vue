@@ -160,6 +160,74 @@
             <PlatformIcon platform="grok" size="sm" />
             Grok
           </button>
+          <button
+            type="button"
+            data-testid="platform-passthrough"
+            @click="form.platform = PASSTHROUGH_PLATFORM_SENTINEL"
+            :class="[
+              'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
+              isPassthroughPlatform
+                ? 'bg-white text-teal-600 shadow-sm dark:bg-dark-600 dark:text-teal-400'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ]"
+          >
+            <Icon name="cloud" size="sm" />
+            {{ t('admin.accounts.passthrough.title') }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 透传账号：自定义服务名 + base_url + 凭证 + 路由白名单 -->
+      <div v-if="isPassthroughPlatform" class="space-y-4">
+        <div>
+          <label class="input-label">{{ t('admin.accounts.passthrough.serviceName') }}</label>
+          <input
+            v-model="passthroughServiceName"
+            type="text"
+            required
+            class="input font-mono"
+            placeholder="firecrawl"
+            data-testid="passthrough-service-name"
+          />
+          <p class="input-hint">{{ t('admin.accounts.passthrough.serviceNameHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.passthrough.baseUrl') }}</label>
+          <input
+            v-model="passthroughBaseUrl"
+            type="text"
+            required
+            class="input"
+            placeholder="https://api.firecrawl.dev"
+            data-testid="passthrough-base-url"
+          />
+          <p class="input-hint">{{ t('admin.accounts.passthrough.baseUrlHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.passthrough.apiKey') }}</label>
+          <input
+            v-model="passthroughApiKey"
+            type="password"
+            required
+            class="input font-mono"
+            placeholder="fc-..."
+            data-testid="passthrough-api-key"
+          />
+          <p class="input-hint">{{ t('admin.accounts.passthrough.apiKeyHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.passthrough.routes') }}</label>
+          <textarea
+            v-model="passthroughRoutesJSON"
+            rows="8"
+            class="input font-mono text-xs"
+            spellcheck="false"
+            data-testid="passthrough-routes"
+          ></textarea>
+          <p class="input-hint">{{ t('admin.accounts.passthrough.routesHint') }}</p>
+          <p v-if="passthroughRoutesError" class="mt-1 text-xs text-red-600 dark:text-red-400">
+            {{ passthroughRoutesError }}
+          </p>
         </div>
       </div>
 
@@ -1254,7 +1322,7 @@
 
             <!-- Whitelist Mode -->
             <div v-if="modelRestrictionMode === 'whitelist'">
-              <ModelWhitelistSelector v-model="allowedModels" :platform="form.platform" :sync-credentials="syncPreviewCredentials" />
+              <ModelWhitelistSelector v-model="allowedModels" :platform="asGroupPlatform(form.platform)" :sync-credentials="syncPreviewCredentials" />
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 {{ t('admin.accounts.selectedModels', { count: allowedModels.length }) }}
                 <span v-if="allowedModels.length === 0">{{
@@ -2072,7 +2140,7 @@
 
           <!-- Whitelist Mode -->
           <div v-if="modelRestrictionMode === 'whitelist'">
-            <ModelWhitelistSelector v-model="allowedModels" :platform="form.platform" :sync-credentials="syncPreviewCredentials" />
+            <ModelWhitelistSelector v-model="allowedModels" :platform="asGroupPlatform(form.platform)" :sync-credentials="syncPreviewCredentials" />
             <p class="text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.selectedModels', { count: allowedModels.length }) }}
               <span v-if="allowedModels.length === 0">{{
@@ -3183,7 +3251,7 @@
           v-if="!authStore.isSimpleMode"
           v-model="form.group_ids"
           :groups="groups"
-          :platform="form.platform"
+          :platform="asGroupPlatform(form.platform)"
           :mixed-scheduling="mixedScheduling"
           data-tour="account-form-groups"
         />
@@ -3214,7 +3282,7 @@
         :show-sso-option="form.platform === 'grok'"
         :show-manual-option="true"
         :initial-input-method="'manual'"
-        :platform="form.platform"
+        :platform="asGroupPlatform(form.platform)"
         :show-project-id="geminiOAuthType === 'code_assist'"
         @generate-url="handleGenerateUrl"
         @cookie-auth="handleCookieAuth"
@@ -3577,6 +3645,7 @@ import type {
   OpenAIResponsesMode,
   OpenAIEndpointCapability
 } from '@/types'
+import { asGroupPlatform } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
@@ -4103,6 +4172,24 @@ const tempUnschedPresets = computed(() => [
   }
 ])
 
+// 透传账号：platform 存的是自由服务名（/px/:service 按它匹配），因此按钮不能直接
+// 写死一个值。用哨兵值标记"已选透传"，提交时再替换成用户填的服务名。
+const PASSTHROUGH_PLATFORM_SENTINEL = '__passthrough__'
+const passthroughServiceName = ref('')
+const passthroughBaseUrl = ref('')
+const passthroughApiKey = ref('')
+const passthroughRoutesJSON = ref(
+  JSON.stringify(
+    [
+      { method: 'POST', path: '/v2/scrape', sku: 'firecrawl/scrape' },
+      { method: 'GET', path: '/v2/crawl/*', sku: 'firecrawl/crawl-status', idempotent: true }
+    ],
+    null,
+    2
+  )
+)
+const passthroughRoutesError = ref('')
+
 const form = reactive({
   name: '',
   notes: '',
@@ -4118,8 +4205,21 @@ const form = reactive({
   expires_at: null as number | null
 })
 
+// 是否处于透传模式：platform 等于哨兵值，或已是一个非内置平台的自定义服务名。
+// 后者用于编辑既有透传账号时正确回显表单。
+const BUILTIN_PLATFORMS = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok']
+const isPassthroughPlatform = computed(
+  () =>
+    form.platform === PASSTHROUGH_PLATFORM_SENTINEL ||
+    (!!form.platform && !BUILTIN_PLATFORMS.includes(form.platform))
+)
+
 // Helper to check if current type needs OAuth flow
 const isOAuthFlow = computed(() => {
+  // 透传账号是纯 API Key 形态，不需要 OAuth 流程
+  if (isPassthroughPlatform.value) {
+    return false
+  }
   // Antigravity upstream 类型不需要 OAuth 流程
   if (form.platform === 'antigravity' && antigravityAccountType.value === 'upstream') {
     return false
@@ -4971,6 +5071,69 @@ const handleSubmit = async () => {
       return
     }
     step.value = 2
+    return
+  }
+
+  // 透传账号：直接创建。platform 存用户填的服务名，路由白名单落 extra。
+  if (isPassthroughPlatform.value) {
+    if (!form.name.trim()) {
+      appStore.showError(t('admin.accounts.pleaseEnterAccountName'))
+      return
+    }
+    const serviceName = passthroughServiceName.value.trim().toLowerCase()
+    // 服务名会直接出现在 URL 路径里，限制字符集避免路由歧义与注入。
+    if (!/^[a-z0-9-]+$/.test(serviceName)) {
+      appStore.showError(t('admin.accounts.passthrough.serviceNameInvalid'))
+      return
+    }
+    if (!passthroughBaseUrl.value.trim() || !passthroughApiKey.value.trim()) {
+      appStore.showError(t('admin.accounts.passthrough.routesRequired'))
+      return
+    }
+
+    // 路由白名单必须是合法 JSON 数组，且每条都要有 path 与 sku——
+    // 这两个字段缺一不可：path 决定放行什么，sku 决定怎么计费。
+    let routes: unknown
+    try {
+      routes = JSON.parse(passthroughRoutesJSON.value)
+    } catch {
+      passthroughRoutesError.value = t('admin.accounts.passthrough.routesInvalid')
+      appStore.showError(passthroughRoutesError.value)
+      return
+    }
+    if (!Array.isArray(routes) || routes.length === 0) {
+      passthroughRoutesError.value = t('admin.accounts.passthrough.routesRequired')
+      appStore.showError(passthroughRoutesError.value)
+      return
+    }
+    for (const r of routes) {
+      const item = r as Record<string, unknown>
+      if (!item || typeof item.path !== 'string' || typeof item.sku !== 'string') {
+        passthroughRoutesError.value = t('admin.accounts.passthrough.routeMissingFields')
+        appStore.showError(passthroughRoutesError.value)
+        return
+      }
+    }
+    passthroughRoutesError.value = ''
+
+    await submitCreateAccount({
+      name: form.name.trim(),
+      notes: form.notes.trim() || null,
+      platform: serviceName,
+      type: 'apikey',
+      credentials: {
+        base_url: passthroughBaseUrl.value.trim(),
+        api_key: passthroughApiKey.value.trim()
+      },
+      extra: { passthrough: { routes } },
+      proxy_id: form.proxy_id,
+      concurrency: form.concurrency,
+      load_factor: form.load_factor,
+      priority: form.priority,
+      rate_multiplier: form.rate_multiplier,
+      group_ids: form.group_ids,
+      expires_at: form.expires_at
+    })
     return
   }
 

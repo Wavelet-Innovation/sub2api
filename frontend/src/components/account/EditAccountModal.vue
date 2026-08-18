@@ -2599,7 +2599,7 @@
         v-if="!authStore.isSimpleMode"
         v-model="form.group_ids"
         :groups="groups"
-        :platform="account?.platform"
+        :platform="asGroupPlatform(account?.platform)"
         :mixed-scheduling="mixedScheduling"
         data-tour="account-form-groups"
       />
@@ -2674,6 +2674,7 @@ import type {
   OpenAIEndpointCapability,
   OllamaCloudUsageState
 } from '@/types'
+import { asGroupPlatform } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'

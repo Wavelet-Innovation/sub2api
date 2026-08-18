@@ -85,12 +85,28 @@ interface Props {
 
 const props = defineProps<Props>()
 
+// 平台标签。
+//
+// 注意：这里必须显式判断 gemini，不能把它当作 else 兜底——透传账号的 platform
+// 是自由服务名（firecrawl / bailian 等），落进 Gemini 分支会在账号列表里显示成
+// 完全无关的平台。兜底改为原样回显服务名，这样新增透传服务无需再改本组件。
 const platformLabel = computed(() => {
-  if (props.platform === 'anthropic') return 'Anthropic'
-  if (props.platform === 'openai') return 'OpenAI'
-  if (props.platform === 'antigravity') return 'Antigravity'
-  if (props.platform === 'grok') return 'Grok'
-  return 'Gemini'
+  switch (props.platform) {
+    case 'anthropic':
+      return 'Anthropic'
+    case 'openai':
+      return 'OpenAI'
+    case 'antigravity':
+      return 'Antigravity'
+    case 'grok':
+      return 'Grok'
+    case 'gemini':
+      return 'Gemini'
+    case 'composite':
+      return 'Composite'
+    default:
+      return props.platform || '-'
+  }
 })
 
 const normalizedAuthMode = computed(() =>
@@ -175,7 +191,14 @@ const platformClass = computed(() => {
   if (props.platform === 'grok') {
     return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
   }
-  return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+  if (props.platform === 'gemini') {
+    return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+  }
+  if (props.platform === 'composite') {
+    return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+  }
+  // 透传等自定义平台：中性配色，避免借用某个具体厂商的品牌色造成误认
+  return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
 })
 
 const typeClass = computed(() => {

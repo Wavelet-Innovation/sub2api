@@ -522,6 +522,18 @@ export interface PaginationConfig {
 
 export type GroupPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok' | 'composite'
 
+/**
+ * 把账号的 platform 收窄成 GroupPlatform；透传账号的自定义服务名返回 undefined。
+ *
+ * 用途：分组筛选、平台图标等只认内置平台的地方。对透传账号返回 undefined 是
+ * 语义正确的——GroupSelector 把 undefined 当作"不按平台过滤"，而透传账号确实
+ * 可以绑到任意分组（请求时 ForcePlatform 会覆盖分组平台）。
+ */
+export function asGroupPlatform(platform?: string | null): GroupPlatform | undefined {
+  const builtin: GroupPlatform[] = ['anthropic', 'openai', 'gemini', 'antigravity', 'grok', 'composite']
+  return builtin.includes(platform as GroupPlatform) ? (platform as GroupPlatform) : undefined
+}
+
 export type SubscriptionType = 'standard' | 'subscription'
 
 export interface OpenAIMessagesDispatchModelConfig {
@@ -852,7 +864,15 @@ export interface UpdateGroupRequest {
 
 // ==================== Account & Proxy Types ====================
 
-export type AccountPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity' | 'grok'
+// 透传账号的 platform 是自由服务名（如 firecrawl），/px/:service 直接按它匹配。
+// (string & {}) 让已知平台仍有自动补全，同时允许任意自定义值。
+export type AccountPlatform =
+  | 'anthropic'
+  | 'openai'
+  | 'gemini'
+  | 'antigravity'
+  | 'grok'
+  | (string & {})
 export type AccountType = 'oauth' | 'setup-token' | 'apikey' | 'upstream' | 'bedrock' | 'service_account'
 export type OAuthAddMethod = 'oauth' | 'setup-token'
 export type ProxyProtocol = 'http' | 'https' | 'socks5' | 'socks5h'
