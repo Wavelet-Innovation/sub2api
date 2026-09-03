@@ -12,22 +12,23 @@ func firstNonEmpty(values ...string) string {
 }
 
 type SystemSettings struct {
-	RegistrationEnabled              bool
-	EmailVerifyEnabled               bool
-	RegistrationEmailSuffixWhitelist []string
-	PromoCodeEnabled                 bool
-	PasswordResetEnabled             bool
-	FrontendURL                      string
-	InvitationCodeEnabled            bool
-	TotpEnabled                      bool // TOTP 双因素认证
-	PasskeyEnabled                   bool // Passkey 登录
-	SessionBindingEnabled            bool // 会话 IP/UA 绑定（变更即失效）
-	StepUpEnabled                    bool // 敏感操作 step-up 2FA 门控
-	AuditLogRetentionDays            int  // 审计日志保留天数（<=0 永久保留）
-	LoginAgreementEnabled            bool
-	LoginAgreementMode               string
-	LoginAgreementUpdatedAt          string
-	LoginAgreementDocuments          []LoginAgreementDocument
+	RegistrationEnabled                 bool
+	EmailVerifyEnabled                  bool
+	RegistrationEmailSuffixWhitelist    []string
+	RegistrationEmailDomainQuotaEnabled bool // 白名单非空时放行非白名单域名限量注册（默认关闭）
+	PromoCodeEnabled                    bool
+	PasswordResetEnabled                bool
+	FrontendURL                         string
+	InvitationCodeEnabled               bool
+	TotpEnabled                         bool // TOTP 双因素认证
+	PasskeyEnabled                      bool // Passkey 登录
+	SessionBindingEnabled               bool // 会话 IP/UA 绑定（变更即失效）
+	StepUpEnabled                       bool // 敏感操作 step-up 2FA 门控
+	AuditLogRetentionDays               int  // 审计日志保留天数（<=0 永久保留）
+	LoginAgreementEnabled               bool
+	LoginAgreementMode                  string
+	LoginAgreementUpdatedAt             string
+	LoginAgreementDocuments             []LoginAgreementDocument
 
 	SMTPHost               string
 	SMTPPort               int
@@ -196,16 +197,25 @@ type SystemSettings struct {
 	OpsMetricsIntervalSeconds    int
 
 	// Channel Monitor feature
-	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
-	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
+	ChannelMonitorEnabled                bool   `json:"channel_monitor_enabled"`
+	ChannelMonitorMode                   string `json:"channel_monitor_mode"`
+	ChannelMonitorDefaultIntervalSeconds int    `json:"channel_monitor_default_interval_seconds"`
+	ChannelMonitorHideThroughput         bool   `json:"channel_monitor_hide_throughput"`
+	ChannelMonitorShowQuota              bool   `json:"channel_monitor_show_quota"`
+
+	// Grok model mapping policy (admin settings; empty mapping falls back to these).
+	GrokDefaultTextModel           string `json:"grok_default_text_model"`
+	GrokCrossClientModelMapEnabled bool   `json:"grok_cross_client_model_map_enabled"`
+	GrokDefaultBaseURLMode         string `json:"grok_default_base_url_mode"`
 
 	// Available Channels feature (user-facing aggregate view)
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
 	// Model Plaza feature (public group/model pricing showcase)
-	ModelPlazaEnabled     bool   `json:"model_plaza_enabled"`
-	ModelPlazaRequireAuth bool   `json:"model_plaza_require_auth"`
-	ModelPlazaDescription string `json:"model_plaza_description"`
+	ModelPlazaEnabled       bool   `json:"model_plaza_enabled"`
+	ModelPlazaRequireAuth   bool   `json:"model_plaza_require_auth"`
+	ModelPlazaDescription   string `json:"model_plaza_description"`
+	PluginManagementEnabled bool   `json:"plugin_management_enabled"`
 
 	// Claude Code version check
 	MinClaudeCodeVersion string
@@ -218,6 +228,7 @@ type SystemSettings struct {
 	BackendModeEnabled bool
 
 	// Gateway forwarding behavior
+	OpenAITTFTMode                         string // Responses first_token_ms 统计口径（默认 semantic）
 	EnableFingerprintUnification           bool   // 是否统一 OAuth 账号的指纹头（默认 true）
 	EnableMetadataPassthrough              bool   // 是否透传客户端原始 metadata（默认 false）
 	EnableCCHSigning                       bool   // 已废弃 no-op：新版 CLI 取消 cch 签名后网关不再注入/签名 cch，开关无效果
@@ -292,6 +303,9 @@ type SystemSettings struct {
 	// 系统全局默认平台配额（key = platform，nil/缺省 = 不限制）
 	DefaultPlatformQuotas map[string]*DefaultPlatformQuotaSetting `json:"default_platform_quotas"`
 
+	// 系统全局账号自动停调阈值（key = platform，100 = disabled）
+	AccountSchedulingThresholds map[string]int `json:"account_scheduling_thresholds"`
+
 	// 允许终端用户在用量页查看自己的失败请求
 	AllowUserViewErrorRequests bool
 }
@@ -302,38 +316,39 @@ type DefaultSubscriptionSetting struct {
 }
 
 type PublicSettings struct {
-	RegistrationEnabled              bool
-	EmailVerifyEnabled               bool
-	ForceEmailOnThirdPartySignup     bool
-	RegistrationEmailSuffixWhitelist []string
-	PromoCodeEnabled                 bool
-	PasswordResetEnabled             bool
-	InvitationCodeEnabled            bool
-	TotpEnabled                      bool // TOTP 双因素认证
-	PasskeyEnabled                   bool
-	LoginAgreementEnabled            bool
-	LoginAgreementMode               string
-	LoginAgreementUpdatedAt          string
-	LoginAgreementRevision           string
-	LoginAgreementDocuments          []LoginAgreementDocument
-	TurnstileEnabled                 bool
-	TurnstileSiteKey                 string
-	TencentCaptchaEnabled            bool
-	TencentCaptchaAppID              string
-	TencentCaptchaRegion             string
-	AliyunCaptchaEnabled             bool
-	AliyunCaptchaSceneID             string
-	AliyunCaptchaPrefix              string
-	AliyunCaptchaRegion              string
-	SiteName                         string
-	SiteLogo                         string
-	SiteSubtitle                     string
-	APIBaseURL                       string
-	ContactInfo                      string
-	DocURL                           string
-	HomeContent                      string
-	CompactHomeEnabled               bool
-	HideCcsImportButton              bool
+	RegistrationEnabled                 bool
+	EmailVerifyEnabled                  bool
+	ForceEmailOnThirdPartySignup        bool
+	RegistrationEmailSuffixWhitelist    []string
+	RegistrationEmailDomainQuotaEnabled bool
+	PromoCodeEnabled                    bool
+	PasswordResetEnabled                bool
+	InvitationCodeEnabled               bool
+	TotpEnabled                         bool // TOTP 双因素认证
+	PasskeyEnabled                      bool
+	LoginAgreementEnabled               bool
+	LoginAgreementMode                  string
+	LoginAgreementUpdatedAt             string
+	LoginAgreementRevision              string
+	LoginAgreementDocuments             []LoginAgreementDocument
+	TurnstileEnabled                    bool
+	TurnstileSiteKey                    string
+	TencentCaptchaEnabled               bool
+	TencentCaptchaAppID                 string
+	TencentCaptchaRegion                string
+	AliyunCaptchaEnabled                bool
+	AliyunCaptchaSceneID                string
+	AliyunCaptchaPrefix                 string
+	AliyunCaptchaRegion                 string
+	SiteName                            string
+	SiteLogo                            string
+	SiteSubtitle                        string
+	APIBaseURL                          string
+	ContactInfo                         string
+	DocURL                              string
+	HomeContent                         string
+	CompactHomeEnabled                  bool
+	HideCcsImportButton                 bool
 
 	PurchaseSubscriptionEnabled bool
 	PurchaseSubscriptionURL     string
@@ -362,15 +377,24 @@ type PublicSettings struct {
 	BalanceLowNotifyRechargeURL string
 
 	// Channel Monitor feature
-	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
-	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
+	ChannelMonitorEnabled                bool   `json:"channel_monitor_enabled"`
+	ChannelMonitorMode                   string `json:"channel_monitor_mode"`
+	ChannelMonitorDefaultIntervalSeconds int    `json:"channel_monitor_default_interval_seconds"`
+	ChannelMonitorHideThroughput         bool   `json:"channel_monitor_hide_throughput"`
+	ChannelMonitorShowQuota              bool   `json:"channel_monitor_show_quota"`
+
+	// Grok model mapping policy (admin settings).
+	GrokDefaultTextModel           string `json:"grok_default_text_model"`
+	GrokCrossClientModelMapEnabled bool   `json:"grok_cross_client_model_map_enabled"`
+	GrokDefaultBaseURLMode         string `json:"grok_default_base_url_mode"`
 
 	// Available Channels feature (user-facing aggregate view)
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
 	// Model Plaza feature (public group/model pricing showcase)
-	ModelPlazaEnabled     bool `json:"model_plaza_enabled"`
-	ModelPlazaRequireAuth bool `json:"model_plaza_require_auth"`
+	ModelPlazaEnabled       bool `json:"model_plaza_enabled"`
+	ModelPlazaRequireAuth   bool `json:"model_plaza_require_auth"`
+	PluginManagementEnabled bool `json:"plugin_management_enabled"`
 
 	// Affiliate (邀请返利) feature toggle
 	AffiliateEnabled bool `json:"affiliate_enabled"`
@@ -542,6 +566,33 @@ type RateLimit429CooldownSettings struct {
 	CooldownSeconds int `json:"cooldown_seconds"`
 }
 
+// OpenAIImagesOAuthUnavailableCooldownSettings controls how long an OAuth account's image capability is paused when unavailable.
+type OpenAIImagesOAuthUnavailableCooldownSettings struct {
+	CooldownMinutes int `json:"cooldown_minutes"`
+}
+
+const (
+	openAIImagesOAuthUnavailableDefaultCooldownMinutes = 30
+	openAIImagesOAuthUnavailableMaxCooldownMinutes     = 120
+)
+
+// OpenAIAPIKeyHealthBreakerSettings controls cross-instance failure counting for OpenAI pool API keys.
+type OpenAIAPIKeyHealthBreakerSettings struct {
+	Enabled          bool `json:"enabled"`
+	WindowMinutes    int  `json:"window_minutes"`
+	FailureThreshold int  `json:"failure_threshold"`
+	CooldownMinutes  int  `json:"cooldown_minutes"`
+}
+
+func DefaultOpenAIAPIKeyHealthBreakerSettings() *OpenAIAPIKeyHealthBreakerSettings {
+	return &OpenAIAPIKeyHealthBreakerSettings{
+		Enabled:          false,
+		WindowMinutes:    2,
+		FailureThreshold: 10,
+		CooldownMinutes:  5,
+	}
+}
+
 // DefaultOverloadCooldownSettings 返回默认的过载冷却配置（启用，10分钟）
 func DefaultOverloadCooldownSettings() *OverloadCooldownSettings {
 	return &OverloadCooldownSettings{
@@ -556,6 +607,10 @@ func DefaultRateLimit429CooldownSettings() *RateLimit429CooldownSettings {
 		Enabled:         true,
 		CooldownSeconds: 5,
 	}
+}
+
+func DefaultOpenAIImagesOAuthUnavailableCooldownSettings() *OpenAIImagesOAuthUnavailableCooldownSettings {
+	return &OpenAIImagesOAuthUnavailableCooldownSettings{CooldownMinutes: openAIImagesOAuthUnavailableDefaultCooldownMinutes}
 }
 
 // DefaultBetaPolicySettings 返回默认的 Beta 策略配置
