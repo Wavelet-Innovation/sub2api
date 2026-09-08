@@ -88,8 +88,15 @@ const openAILongContextBillingEnabledKey = "openai_long_context_billing_enabled"
 const (
 	OpenAIEndpointCapabilityChatCompletions OpenAIEndpointCapability = "chat_completions"
 	OpenAIEndpointCapabilityEmbeddings      OpenAIEndpointCapability = "embeddings"
-	OpenAIEndpointCapabilityAlphaSearch     OpenAIEndpointCapability = "alpha_search"
-	OpenAIEndpointCapabilityLive            OpenAIEndpointCapability = "live"
+	// OpenAIEndpointCapabilityAudioTranscriptions 表示上游提供
+	// /v1/audio/transcriptions（语音转写）。与 embeddings 同为原生端点，
+	// 仅 api_key 账号可承接：OAuth/Codex 凭据不覆盖该端点。
+	OpenAIEndpointCapabilityAudioTranscriptions OpenAIEndpointCapability = "audio_transcriptions"
+	// OpenAIEndpointCapabilityAudioSpeech 表示上游提供 /v1/audio/speech
+	// （文本转语音）。同样仅 api_key 账号可承接。
+	OpenAIEndpointCapabilityAudioSpeech OpenAIEndpointCapability = "audio_speech"
+	OpenAIEndpointCapabilityAlphaSearch OpenAIEndpointCapability = "alpha_search"
+	OpenAIEndpointCapabilityLive        OpenAIEndpointCapability = "live"
 	// OpenAIEndpointCapabilityGrokMediaGeneration keeps image/video generation
 	// away from Grok accounts that are explicitly disabled or whose billing
 	// entitlement probe was forbidden. Video status lookups intentionally do not
@@ -1485,6 +1492,14 @@ func (a *Account) SupportsOpenAIEndpointCapability(capability OpenAIEndpointCapa
 			return false
 		}
 	case OpenAIEndpointCapabilityEmbeddings:
+		if a.Type != AccountTypeAPIKey {
+			return false
+		}
+	case OpenAIEndpointCapabilityAudioTranscriptions:
+		if a.Type != AccountTypeAPIKey {
+			return false
+		}
+	case OpenAIEndpointCapabilityAudioSpeech:
 		if a.Type != AccountTypeAPIKey {
 			return false
 		}

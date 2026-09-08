@@ -712,6 +712,45 @@ Long-running OpenAI/Grok image generation and editing can be submitted through `
 
 ---
 
+## Speech to Text
+
+OpenAI-compatible speech-to-text is served at `/v1/audio/transcriptions` (and the bare `/audio/transcriptions` alias) for groups on the OpenAI platform. The endpoint accepts the standard `multipart/form-data` upload and forwards the body to the upstream unchanged, so any client that already talks to OpenAI works without modification.
+
+```bash
+curl https://your-host/v1/audio/transcriptions \
+  -H "Authorization: Bearer $SUB2API_KEY" \
+  -F file=@speech.mp3 \
+  -F model=gpt-4o-transcribe
+```
+
+- Streaming (`stream=true`) is relayed as server-sent events, and usage is billed from the terminal event.
+- All `response_format` values are supported. Non-JSON formats such as `text`, `srt`, and `vtt` pass through with the upstream content type intact.
+- Billing uses the token counts the upstream reports. The `gpt-4o-transcribe` and `gpt-4o-mini-transcribe` families report tokens and price normally. `whisper-1` bills per audio second upstream and returns no token usage, so it records a zero-token row.
+- Only OpenAI API-key accounts serve this endpoint. Accounts that pin an explicit endpoint capability list need `audio_transcriptions` enabled in the account editor.
+
+---
+
+## Text to Speech
+
+OpenAI-compatible speech synthesis is served at `/v1/audio/speech` (and the bare `/audio/speech` alias) for groups on the OpenAI platform.
+
+```bash
+curl https://your-host/v1/audio/speech \
+  -H "Authorization: Bearer $SUB2API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-4o-mini-tts","input":"Hello there.","voice":"alloy"}' \
+  --output speech.mp3
+```
+
+- The audio body is relayed to the client as it arrives rather than buffered, so playback can start before synthesis finishes. This covers both plain audio responses and `stream_format=sse`.
+- `response_format` (mp3, wav, opus, …) passes through with the upstream content type intact.
+- Both `input` and `instructions` go through content moderation before any upstream call.
+- Only OpenAI API-key accounts serve this endpoint. Accounts that pin an explicit endpoint capability list need `audio_speech` enabled in the account editor.
+
+**Billing caveat:** the speech endpoint returns raw audio and no usage object, so the gateway meters the input text locally with the model's own tiktoken encoding and records that as input tokens. Generated audio output is **not** metered. On `gpt-4o-mini-tts`, audio output is the dominant cost upstream ($0.015/min), so these rows undercount real spend. Closing this needs per-second output billing, for which the plumbing already exists on the Grok video path.
+
+---
+
 ## Grok / xAI Support
 
 Sub2API supports both Grok subscription accounts through xAI OAuth and standard xAI API-key accounts. Both account types forward OpenAI-compatible Responses traffic to xAI.

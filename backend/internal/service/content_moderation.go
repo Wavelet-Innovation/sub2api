@@ -56,6 +56,8 @@ const (
 	ContentModerationProtocolOpenAIChat        = "openai_chat_completions"
 	ContentModerationProtocolGemini            = "gemini"
 	ContentModerationProtocolOpenAIImages      = "openai_images"
+	ContentModerationProtocolOpenAIAudio       = "openai_audio_transcriptions"
+	ContentModerationProtocolOpenAIAudioSpeech = "openai_audio_speech"
 
 	defaultContentModerationBaseURL   = "https://api.openai.com"
 	defaultContentModerationModel     = "omni-moderation-latest"

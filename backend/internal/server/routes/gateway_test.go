@@ -370,3 +370,68 @@ func TestGatewayRoutesOpenAICountTokensPathIsRegistered(t *testing.T) {
 	router.ServeHTTP(w, req)
 	require.NotEqual(t, http.StatusNotFound, w.Code)
 }
+
+func TestGatewayRoutesAudioTranscriptionsPathsAreRegistered(t *testing.T) {
+	router := newGatewayRoutesTestRouter()
+	registered := make(map[string]bool)
+	for _, route := range router.Routes() {
+		registered[route.Method+" "+route.Path] = true
+	}
+
+	for _, route := range []string{
+		"POST /v1/audio/transcriptions",
+		"POST /audio/transcriptions",
+	} {
+		require.True(t, registered[route], "%s should be registered", route)
+	}
+}
+
+func TestGatewayRoutesAudioTranscriptionsRejectedForNonOpenAIPlatform(t *testing.T) {
+	router := newGatewayRoutesTestRouter(service.PlatformAnthropic)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/audio/transcriptions", strings.NewReader("body"))
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=xyz")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.Contains(t, w.Body.String(), "Audio Transcriptions API is not supported")
+}
+
+func TestCompositeRouteEndpointForAudioTranscriptionsPath(t *testing.T) {
+	require.Equal(t, service.CompositeRouteEndpointAudioTranscriptions, compositeRouteEndpointForPath("/v1/audio/transcriptions"))
+}
+
+func TestGatewayRoutesAudioSpeechPathsAreRegistered(t *testing.T) {
+	router := newGatewayRoutesTestRouter()
+	registered := make(map[string]bool)
+	for _, route := range router.Routes() {
+		registered[route.Method+" "+route.Path] = true
+	}
+
+	for _, route := range []string{
+		"POST /v1/audio/speech",
+		"POST /audio/speech",
+	} {
+		require.True(t, registered[route], "%s should be registered", route)
+	}
+}
+
+func TestGatewayRoutesAudioSpeechRejectedForNonOpenAIPlatform(t *testing.T) {
+	router := newGatewayRoutesTestRouter(service.PlatformAnthropic)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/audio/speech",
+		strings.NewReader(`{"model":"gpt-4o-mini-tts","input":"hi","voice":"alloy"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	require.Contains(t, w.Body.String(), "Audio Speech API is not supported")
+}
+
+func TestCompositeRouteEndpointForAudioSpeechPath(t *testing.T) {
+	require.Equal(t, service.CompositeRouteEndpointAudioSpeech, compositeRouteEndpointForPath("/v1/audio/speech"))
+}

@@ -430,3 +430,33 @@ func TestGetUpstreamEndpoint_FullFlow(t *testing.T) {
 	got := GetUpstreamEndpoint(c, service.PlatformOpenAI)
 	require.Equal(t, "/v1/responses/compact", got)
 }
+
+func TestNormalizeInboundEndpointAudioTranscriptions(t *testing.T) {
+	for _, path := range []string{
+		"/v1/audio/transcriptions",
+		"/audio/transcriptions",
+		"/openai/v1/audio/transcriptions",
+	} {
+		require.Equal(t, EndpointAudioTranscriptions, NormalizeInboundEndpoint(path), "path=%s", path)
+	}
+}
+
+func TestDeriveUpstreamEndpointKeepsAudioTranscriptions(t *testing.T) {
+	require.Equal(t, EndpointAudioTranscriptions, DeriveUpstreamEndpoint(EndpointAudioTranscriptions, "/v1/audio/transcriptions", service.PlatformOpenAI))
+}
+
+func TestNormalizeInboundEndpointAudioSpeech(t *testing.T) {
+	for _, path := range []string{
+		"/v1/audio/speech",
+		"/audio/speech",
+		"/openai/v1/audio/speech",
+	} {
+		require.Equal(t, EndpointAudioSpeech, NormalizeInboundEndpoint(path), "path=%s", path)
+	}
+	// The two audio endpoints must not collapse into each other.
+	require.Equal(t, EndpointAudioTranscriptions, NormalizeInboundEndpoint("/v1/audio/transcriptions"))
+}
+
+func TestDeriveUpstreamEndpointKeepsAudioSpeech(t *testing.T) {
+	require.Equal(t, EndpointAudioSpeech, DeriveUpstreamEndpoint(EndpointAudioSpeech, "/v1/audio/speech", service.PlatformOpenAI))
+}

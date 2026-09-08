@@ -12,14 +12,16 @@ const (
 	CompositeRouteMatchExact  = "exact"
 	CompositeRouteMatchPrefix = "prefix"
 
-	CompositeRouteEndpointAny             = "any"
-	CompositeRouteEndpointMessages        = "messages"
-	CompositeRouteEndpointCountTokens     = "count_tokens"
-	CompositeRouteEndpointResponses       = "responses"
-	CompositeRouteEndpointChatCompletions = "chat_completions"
-	CompositeRouteEndpointEmbeddings      = "embeddings"
-	CompositeRouteEndpointImages          = "images"
-	CompositeRouteEndpointGemini          = "gemini"
+	CompositeRouteEndpointAny                 = "any"
+	CompositeRouteEndpointMessages            = "messages"
+	CompositeRouteEndpointCountTokens         = "count_tokens"
+	CompositeRouteEndpointResponses           = "responses"
+	CompositeRouteEndpointChatCompletions     = "chat_completions"
+	CompositeRouteEndpointEmbeddings          = "embeddings"
+	CompositeRouteEndpointAudioTranscriptions = "audio_transcriptions"
+	CompositeRouteEndpointAudioSpeech         = "audio_speech"
+	CompositeRouteEndpointImages              = "images"
+	CompositeRouteEndpointGemini              = "gemini"
 
 	CompositeRouteSourceExplicit = "route"
 	CompositeRouteSourceDetector = "detector"
@@ -94,6 +96,8 @@ func normalizeCompositeRouteEndpoint(endpoint string) string {
 		CompositeRouteEndpointResponses,
 		CompositeRouteEndpointChatCompletions,
 		CompositeRouteEndpointEmbeddings,
+		CompositeRouteEndpointAudioTranscriptions,
+		CompositeRouteEndpointAudioSpeech,
 		CompositeRouteEndpointImages,
 		CompositeRouteEndpointGemini:
 		return endpoint

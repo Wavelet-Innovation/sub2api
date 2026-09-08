@@ -866,19 +866,35 @@ describe('EditAccountModal', () => {
     const embeddingsCheckbox = wrapper.get<HTMLInputElement>(
       '[data-testid="openai-endpoint-capability-embeddings"]'
     )
+    const transcriptionsCheckbox = wrapper.get<HTMLInputElement>(
+      '[data-testid="openai-endpoint-capability-audio_transcriptions"]'
+    )
+    const speechCheckbox = wrapper.get<HTMLInputElement>(
+      '[data-testid="openai-endpoint-capability-audio_speech"]'
+    )
 
     expect(chatCheckbox.element.checked).toBe(true)
     expect(embeddingsCheckbox.element.checked).toBe(true)
+    expect(transcriptionsCheckbox.element.checked).toBe(true)
+    expect(speechCheckbox.element.checked).toBe(true)
 
     await embeddingsCheckbox.setValue(false)
+    await transcriptionsCheckbox.setValue(false)
+    await speechCheckbox.setValue(false)
 
     expect(chatCheckbox.element.checked).toBe(true)
     expect(embeddingsCheckbox.element.checked).toBe(false)
+    expect(transcriptionsCheckbox.element.checked).toBe(false)
+    expect(speechCheckbox.element.checked).toBe(false)
 
+    // Chat completions is now the only capability left, so it cannot be
+    // deselected: an account must always accept at least one endpoint.
     await chatCheckbox.setValue(false)
 
     expect(chatCheckbox.element.checked).toBe(true)
     expect(embeddingsCheckbox.element.checked).toBe(false)
+    expect(transcriptionsCheckbox.element.checked).toBe(false)
+    expect(speechCheckbox.element.checked).toBe(false)
 
     await wrapper.get('form#edit-account-form').trigger('submit.prevent')
 
