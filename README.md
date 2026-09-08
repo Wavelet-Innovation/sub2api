@@ -725,7 +725,7 @@ curl https://your-host/v1/audio/transcriptions \
 
 - Streaming (`stream=true`) is relayed as server-sent events, and usage is billed from the terminal event.
 - All `response_format` values are supported. Non-JSON formats such as `text`, `srt`, and `vtt` pass through with the upstream content type intact.
-- Billing uses the token counts the upstream reports. The `gpt-4o-transcribe` and `gpt-4o-mini-transcribe` families report tokens and price normally. `whisper-1` bills per audio second upstream and returns no token usage, so it records a zero-token row.
+- Billing uses the token counts the upstream reports. The `gpt-4o-transcribe` and `gpt-4o-mini-transcribe` families report tokens and price normally. `whisper-1` bills per audio second upstream and returns no token usage, so it has no usable billing quantity: pricing lookup fails closed (`ErrModelPricingUnavailable`) and the usage record is dropped while the request still succeeds. Prefer the `gpt-4o-transcribe` family if you need metered transcription.
 - Only OpenAI API-key accounts serve this endpoint. Accounts that pin an explicit endpoint capability list need `audio_transcriptions` enabled in the account editor.
 
 ---
@@ -747,7 +747,12 @@ curl https://your-host/v1/audio/speech \
 - Both `input` and `instructions` go through content moderation before any upstream call.
 - Only OpenAI API-key accounts serve this endpoint. Accounts that pin an explicit endpoint capability list need `audio_speech` enabled in the account editor.
 
-**Billing caveat:** the speech endpoint returns raw audio and no usage object, so the gateway meters the input text locally with the model's own tiktoken encoding and records that as input tokens. Generated audio output is **not** metered. On `gpt-4o-mini-tts`, audio output is the dominant cost upstream ($0.015/min), so these rows undercount real spend. Closing this needs per-second output billing, for which the plumbing already exists on the Grok video path.
+**Billing:** the speech endpoint returns raw audio and no usage object, so the gateway meters the input text locally with the model's own tiktoken encoding and records that as input tokens.
+
+- `gpt-4o-mini-tts` prices its input tokens from the pricing dataset.
+- `tts-1` and `tts-1-hd` are absent from that dataset and are billed per character upstream ($15 and $30 per 1M characters). They use hardcoded fallback rates converted to per-token at **1.5 characters per token** — $22.50 and $45.00 per 1M tokens. That ratio is tuned for Chinese-leaning text; predominantly English input runs closer to 4 characters per token, so change the constants in `initFallbackPricing` to `6e-05` / `1.2e-04` if your traffic is mostly English.
+
+**Caveat:** generated audio output is **not** metered on any model. On `gpt-4o-mini-tts` the audio output is the dominant upstream cost ($0.015/min), so those rows undercount real spend. Closing this needs per-second output billing, for which the plumbing already exists on the Grok video path.
 
 ---
 

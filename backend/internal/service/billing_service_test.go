@@ -871,8 +871,8 @@ func TestComputeTokenBreakdown_GptImage2ImageEditIssue4386(t *testing.T) {
 
 	cost := svc.computeTokenBreakdown(pricing, tokens, 1.0, "", false)
 
-	wantTextInput := float64(19) * 5e-6    // 0.000095
-	wantImageInput := float64(352) * 8e-6  // 0.002816
+	wantTextInput := float64(19) * 5e-6     // 0.000095
+	wantImageInput := float64(352) * 8e-6   // 0.002816
 	wantImageOutput := float64(439) * 30e-6 // 0.013170
 	require.InDelta(t, wantTextInput, cost.InputCost, 1e-15, "InputCost 仅含文本输入")
 	require.InDelta(t, wantImageInput, cost.ImageInputCost, 1e-15, "图片输入按 $8/1M 独立计费")
@@ -1660,4 +1660,48 @@ func TestComputeTokenBreakdown_NonExplicitZeroImagePrice_FallsBackToOutput(t *te
 	require.InDelta(t, 50*15e-6, bd.ImageOutputCost, 1e-12)
 	// textOutputTokens = 200 - 50 = 150
 	require.InDelta(t, 150*15e-6, bd.OutputCost, 1e-12)
+}
+
+// tts-1 / tts-1-hd 不在价格数据集中，靠回退表按字符折算价计费；
+// 缺失时 GetModelPricing 会 fail-closed，导致语音合成用量记不上。
+func TestFallbackPricing_LegacyTTSModels(t *testing.T) {
+	svc := newTestBillingService()
+
+	for _, tc := range []struct {
+		model     string
+		wantInput float64
+	}{
+		{"tts-1", 2.25e-5},
+		{"tts-1-hd", 4.5e-5},
+		{"TTS-1", 2.25e-5}, // 模型名在 GetModelPricing 入口已 ToLower
+	} {
+		pricing, err := svc.GetModelPricing(tc.model)
+		require.NoErrorf(t, err, "model=%s must not fail closed", tc.model)
+		require.Equalf(t, tc.wantInput, pricing.InputPricePerToken, "model=%s", tc.model)
+		require.Zerof(t, pricing.OutputPricePerToken, "model=%s bills input text only", tc.model)
+	}
+
+	// 1000 token 的合成输入按 $22.5/MTok 计价。
+	cost, err := svc.CalculateCost("tts-1", UsageTokens{InputTokens: 1000}, 1.0)
+	require.NoError(t, err)
+	require.InDelta(t, 0.0225, cost.TotalCost, 1e-9)
+}
+
+// gpt-4o-mini-tts 自带 LiteLLM token 价，绝不能被 tts-1 的字符折算价覆盖。
+func TestFallbackPricing_ModernTTSNotShadowedByLegacyRate(t *testing.T) {
+	svc := newTestBillingService()
+
+	require.Nil(t, svc.getFallbackPricing("gpt-4o-mini-tts"),
+		"gpt-4o-mini-tts must not match the legacy tts-1 fallback entry")
+}
+
+// whisper-1 按音频秒数计价，转写响应不返回 token 用量，因此刻意不进回退表：
+// 加进来只会制造“已计价”的错觉。此测试锁定该决定，避免有人误加 per-token 价。
+func TestFallbackPricing_WhisperStaysUnpricedUntilDurationIsCaptured(t *testing.T) {
+	svc := newTestBillingService()
+
+	require.Nil(t, svc.getFallbackPricing("whisper-1"))
+
+	_, err := svc.GetModelPricing("whisper-1")
+	require.ErrorIs(t, err, ErrModelPricingUnavailable)
 }

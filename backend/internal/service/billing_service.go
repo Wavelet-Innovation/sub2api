@@ -612,6 +612,29 @@ func (s *BillingService) initFallbackPricing() {
 		CacheReadPricePerToken: 0.2e-6,
 		SupportsCacheBreakdown: false,
 	}
+
+	// OpenAI 传统 TTS（tts-1 / tts-1-hd）按“输入字符数”计价，而本计费管线只有
+	// per-token 维度，价格数据集（本地 198 条 / 远端 234 条）也未收录这两个模型，
+	// 因此缺省会 fail-closed（ErrModelPricingUnavailable）——服务照发、用量记不上。
+	//
+	// 折算口径：官方价 tts-1 $15 / 1M 字符、tts-1-hd $30 / 1M 字符，按
+	// 1 token ≈ 1.5 字符换算（偏中文的保守取值，本部署以中文为主）：
+	//     tts-1    : 1.5e-05 $/字符 × 1.5 = 2.25e-05 $/token（$22.5 per MTok）
+	//     tts-1-hd : 3.0e-05 $/字符 × 1.5 = 4.50e-05 $/token（$45.0 per MTok）
+	// 英文文本的实际字符/token 比约为 4，按本口径会高于官方价；若上游客户以英文
+	// 为主，把系数改成 4 即可（tts-1 → 6e-05，tts-1-hd → 1.2e-04）。
+	//
+	// 语音合成只按输入文本计价，生成音频不单独计费，故 OutputPricePerToken 为 0。
+	s.fallbackPrices["tts-1"] = &ModelPricing{
+		InputPricePerToken:     2.25e-5,
+		OutputPricePerToken:    0,
+		SupportsCacheBreakdown: false,
+	}
+	s.fallbackPrices["tts-1-hd"] = &ModelPricing{
+		InputPricePerToken:     4.5e-5,
+		OutputPricePerToken:    0,
+		SupportsCacheBreakdown: false,
+	}
 }
 
 // getFallbackPricing 根据模型系列获取回退价格
@@ -814,7 +837,20 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 		return s.fallbackPrices["grok-4.3"]
 	case "grok-build", "grok-build-0.1", "grok-composer", "grok-composer-2.5-fast", "composer-2.5":
 		return s.fallbackPrices["grok-build-0.1"]
+	// 精确匹配而非前缀匹配：gpt-4o-mini-tts 等新模型自带 LiteLLM token 价，
+	// 不能被 tts-1 的字符折算价覆盖。
+	case "tts-1":
+		return s.fallbackPrices["tts-1"]
+	case "tts-1-hd":
+		return s.fallbackPrices["tts-1-hd"]
 	}
+
+	// whisper-1 刻意不在此表内。它按“音频秒数”计价（$0.006/分钟），而转写
+	// 响应不返回 token 用量——per-token 价格乘以 0 个 token 仍是 0，加进来
+	// 只会造成“已计价”的错觉。要真正计费需要先落库音频时长维度（可参考
+	// Grok 视频的 video_duration_seconds 按秒计费链路），再补 per-second 价。
+	// 切勿把 1e-4（每秒价）填进 InputPricePerToken：一旦将来采集到真实
+	// token 数，会按 $100/MTok 计费。
 
 	return nil
 }
