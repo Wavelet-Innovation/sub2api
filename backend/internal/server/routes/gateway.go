@@ -98,7 +98,7 @@ func RegisterGatewayRoutes(
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
 					"type":    "not_found_error",
-					"message": "Audio Transcriptions API is not supported for this platform",
+					"message": unsupportedAudioPlatformMessage("Audio Transcriptions", c),
 				},
 			})
 			return
@@ -111,7 +111,7 @@ func RegisterGatewayRoutes(
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
 					"type":    "not_found_error",
-					"message": "Audio Speech API is not supported for this platform",
+					"message": unsupportedAudioPlatformMessage("Audio Speech", c),
 				},
 			})
 			return
@@ -417,6 +417,19 @@ func getGroupPlatform(c *gin.Context) string {
 		}
 	}
 	return apiKey.Group.Platform
+}
+
+// unsupportedAudioPlatformMessage names the platform that actually served the
+// request. The bare "not supported for this platform" wording sent operators
+// hunting through account settings when the real cause was simply that the API
+// key's group is not an OpenAI-platform group.
+func unsupportedAudioPlatformMessage(api string, c *gin.Context) string {
+	platform := strings.TrimSpace(getGroupPlatform(c))
+	if platform == "" {
+		platform = "unknown"
+	}
+	return api + " API requires a group on the \"openai\" platform, but this API key's group is on the \"" +
+		platform + "\" platform"
 }
 
 func compositeTargetPlatformMiddleware(resolver *service.CompositeRouteResolver) gin.HandlerFunc {

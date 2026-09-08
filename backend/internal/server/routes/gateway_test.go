@@ -396,7 +396,11 @@ func TestGatewayRoutesAudioTranscriptionsRejectedForNonOpenAIPlatform(t *testing
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusNotFound, w.Code)
-	require.Contains(t, w.Body.String(), "Audio Transcriptions API is not supported")
+	// Quotes are JSON-escaped in the body, so assert on the unquoted fragments.
+	require.Contains(t, w.Body.String(), "Audio Transcriptions API requires a group on the")
+	// The message must name the offending platform so operators aren't left
+	// guessing which setting is wrong.
+	require.Contains(t, w.Body.String(), "anthropic")
 }
 
 func TestCompositeRouteEndpointForAudioTranscriptionsPath(t *testing.T) {
@@ -429,7 +433,8 @@ func TestGatewayRoutesAudioSpeechRejectedForNonOpenAIPlatform(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusNotFound, w.Code)
-	require.Contains(t, w.Body.String(), "Audio Speech API is not supported")
+	require.Contains(t, w.Body.String(), "Audio Speech API requires a group on the")
+	require.Contains(t, w.Body.String(), "anthropic")
 }
 
 func TestCompositeRouteEndpointForAudioSpeechPath(t *testing.T) {
