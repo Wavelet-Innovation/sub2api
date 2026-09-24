@@ -23,15 +23,15 @@ import (
 
 // --- Helper-level (unit) tests for applyOpenAIFastPolicyToWSResponseCreate ---
 
-func TestWSResponseCreate_DefaultPassesPriorityAndNormalizesFast(t *testing.T) {
-	svc := newOpenAIGatewayServiceWithSettings(t, DefaultOpenAIFastPolicySettings())
+func TestWSResponseCreate_NoRulesPassesPriorityAndNormalizesFast(t *testing.T) {
+	svc := newOpenAIGatewayServiceWithSettings(t, &OpenAIFastPolicySettings{})
 	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKey}
 
 	frame := []byte(`{"type":"response.create","model":"gpt-5.5","service_tier":"priority","input":[{"type":"input_text","text":"hi"}]}`)
 	updated, blocked, err := svc.applyOpenAIFastPolicyToWSResponseCreate(context.Background(), account, "gpt-5.5", frame)
 	require.NoError(t, err)
 	require.Nil(t, blocked)
-	require.Equal(t, "priority", gjson.GetBytes(updated, "service_tier").String(), "default policy should preserve priority tier")
+	require.Equal(t, "priority", gjson.GetBytes(updated, "service_tier").String(), "policy without rules should preserve priority tier")
 	// Other fields preserved.
 	require.Equal(t, "response.create", gjson.GetBytes(updated, "type").String())
 	require.Equal(t, "gpt-5.5", gjson.GetBytes(updated, "model").String())
@@ -697,13 +697,13 @@ func TestApplyOpenAIFastPolicyToBody_BlockShortCircuitsUpstream(t *testing.T) {
 	require.Equal(t, string(body), string(updated), "block must not mutate body")
 }
 
-// TestForwardAsAnthropicMessages_BetaFastModePassesOpenAIFastPolicyByDefault
+// TestForwardAsAnthropicMessages_BetaFastModeStrippedByDefaultPolicy
 // verifies the Anthropic-compat entrypoint chain: anthropic-beta: fast-mode →
 // BetaFastMode detection → ServiceTier="priority" injection
-// (openai_gateway_messages.go:60) → default OpenAI fast policy pass. We
+// (openai_gateway_messages.go:60) → default OpenAI fast policy filter. We
 // exercise the same internal pipeline (Anthropic→Responses + BetaFastMode +
 // policy) without spinning up a real upstream HTTP server.
-func TestForwardAsAnthropicMessages_BetaFastModePassesOpenAIFastPolicyByDefault(t *testing.T) {
+func TestForwardAsAnthropicMessages_BetaFastModeStrippedByDefaultPolicy(t *testing.T) {
 	svc := newOpenAIGatewayServiceWithSettings(t, DefaultOpenAIFastPolicySettings())
 	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKey}
 
@@ -729,9 +729,9 @@ func TestForwardAsAnthropicMessages_BetaFastModePassesOpenAIFastPolicyByDefault(
 	upstreamBody, policyErr := svc.applyOpenAIFastPolicyToBody(context.Background(), account, "gpt-5.5", responsesBody)
 	require.NoError(t, policyErr)
 
-	// Step 4: default policy must preserve the explicit fast/priority request.
-	require.Equal(t, "priority", gjson.GetBytes(upstreamBody, "service_tier").String(),
-		"default policy should pass service_tier=priority through to upstream")
+	// Step 4: default policy disables fast for GPT models.
+	require.False(t, gjson.GetBytes(upstreamBody, "service_tier").Exists(),
+		"default policy should strip service_tier=priority for GPT models")
 }
 
 // --- Fix1: passthrough capturedSessionModel must follow session.update ---

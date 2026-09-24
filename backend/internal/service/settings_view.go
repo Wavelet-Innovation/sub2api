@@ -647,10 +647,18 @@ type OpenAIFastPolicySettings struct {
 }
 
 // DefaultOpenAIFastPolicySettings 返回默认的 OpenAI fast 策略配置。
-// 默认不配置任何规则，保留 OpenAI 上游 service_tier 语义；管理员如需
-// 限制 priority/flex，可以在 admin UI 中显式配置 filter 或 block 规则。
+// 默认对所有 GPT 模型关闭 fast：剥离 service_tier=priority（客户端的 "fast"
+// 别名会先归一化为 priority），请求按普通速度与普通价格处理，而不是报错。
+// flex/auto/default/scale 等其他 tier 与非 GPT 模型保持透传。管理员在
+// admin UI 中保存的配置会完全替换此默认值。
 func DefaultOpenAIFastPolicySettings() *OpenAIFastPolicySettings {
 	return &OpenAIFastPolicySettings{
-		Rules: []OpenAIFastPolicyRule{},
+		Rules: []OpenAIFastPolicyRule{{
+			ServiceTier:    OpenAIFastTierPriority,
+			Action:         BetaPolicyActionFilter,
+			Scope:          BetaPolicyScopeAll,
+			ModelWhitelist: []string{"gpt-*"},
+			FallbackAction: BetaPolicyActionPass,
+		}},
 	}
 }
