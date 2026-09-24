@@ -29,6 +29,9 @@ func canonicalizeOpenAIModelAliasSpelling(model string) string {
 	if strings.HasPrefix(normalized, "gpt5") {
 		normalized = "gpt-5" + strings.TrimPrefix(normalized, "gpt5")
 	}
+	if strings.HasPrefix(normalized, "gpt6") {
+		normalized = "gpt-6" + strings.TrimPrefix(normalized, "gpt6")
+	}
 	if !strings.HasPrefix(normalized, "gpt-") && !strings.Contains(normalized, "codex") {
 		return ""
 	}
@@ -65,6 +68,12 @@ func normalizeKnownOpenAICodexModel(model string) string {
 	}
 
 	switch {
+	case strings.Contains(normalized, "gpt-6-astra"):
+		return "gpt-6-astra"
+	case strings.Contains(normalized, "gpt-6-sol"):
+		return "gpt-6-sol"
+	case strings.Contains(normalized, "gpt-6-luna"):
+		return "gpt-6-luna"
 	case strings.Contains(normalized, "gpt-5.6-sol"):
 		return "gpt-5.6-sol"
 	case strings.Contains(normalized, "gpt-5.6-terra"):
@@ -122,6 +131,26 @@ func isOpenAIGPT56Model(model string) bool {
 		}
 	}
 	return false
+}
+
+// openAIGPT6Models 为 GPT-6 系列的官方型号（无裸 gpt-6 别名）。
+var openAIGPT6Models = []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}
+
+// isOpenAIGPT6Model 判断是否 GPT-6 系列模型；入参可为原始模型名或已归一化的基名。
+func isOpenAIGPT6Model(model string) bool {
+	normalized := canonicalizeOpenAIModelAliasSpelling(model)
+	for _, prefix := range openAIGPT6Models {
+		if normalized == prefix || strings.HasPrefix(normalized, prefix+"-") {
+			return true
+		}
+	}
+	return false
+}
+
+// isOpenAIGPT56OrGPT6Model 判断模型是否沿用 GPT-5.6 引入的能力与计费规则：
+// max 推理强度、缓存写入按输入价 1.25 倍计费、272K 以上长上下文加价。
+func isOpenAIGPT56OrGPT6Model(model string) bool {
+	return isOpenAIGPT56Model(model) || isOpenAIGPT6Model(model)
 }
 
 func appendUsageBillingModelCandidate(candidates []string, seen map[string]struct{}, model string) []string {
