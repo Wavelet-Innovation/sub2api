@@ -261,7 +261,7 @@ func responsesFunctionOutputToAnthropicContent(item ResponsesInputItem) json.Raw
 					blocks = append(blocks, AnthropicContentBlock{Type: "text", Text: part.Text})
 				}
 			case "input_image":
-				if source := dataURIToAnthropicImageSource(part.ImageURL); source != nil {
+				if source := imageURLToAnthropicImageSource(part.ImageURL); source != nil {
 					blocks = append(blocks, AnthropicContentBlock{Type: "image", Source: source})
 				}
 			}
@@ -477,7 +477,7 @@ func convertResponsesUserToAnthropicContent(raw json.RawMessage) (json.RawMessag
 				})
 			}
 		case "input_image":
-			src := dataURIToAnthropicImageSource(p.ImageURL)
+			src := imageURLToAnthropicImageSource(p.ImageURL)
 			if src != nil {
 				blocks = append(blocks, AnthropicContentBlock{
 					Type:   "image",
@@ -545,6 +545,16 @@ func fromResponsesCallIDToAnthropic(id string) string {
 		return "toolu_" + id
 	}
 	return id
+}
+
+// imageURLToAnthropicImageSource converts an OpenAI image_url value into an
+// AnthropicImageSource: data URIs become base64 sources and http(s) URLs
+// become url sources. Returns nil for anything else.
+func imageURLToAnthropicImageSource(imageURL string) *AnthropicImageSource {
+	if isHTTPImageURL(imageURL) {
+		return &AnthropicImageSource{Type: "url", URL: imageURL}
+	}
+	return dataURIToAnthropicImageSource(imageURL)
 }
 
 // dataURIToAnthropicImageSource parses a data URI into an AnthropicImageSource.

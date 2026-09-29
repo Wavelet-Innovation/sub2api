@@ -236,7 +236,7 @@ func anthropicUserToResponses(raw json.RawMessage) ([]ResponsesInputItem, error)
 				parts = append(parts, ResponsesContentPart{Type: "input_text", Text: b.Text})
 			}
 		case "image":
-			if uri := anthropicImageToDataURI(b.Source); uri != "" {
+			if uri := anthropicImageSourceToURL(b.Source); uri != "" {
 				parts = append(parts, ResponsesContentPart{Type: "input_image", ImageURL: uri})
 			}
 		}
@@ -349,10 +349,20 @@ func fromResponsesCallID(id string) string {
 	return id
 }
 
-// anthropicImageToDataURI converts an AnthropicImageSource to a data URI string.
-// Returns "" if the source is nil or has no data.
-func anthropicImageToDataURI(src *AnthropicImageSource) string {
-	if src == nil || src.Data == "" {
+// anthropicImageSourceToURL converts an AnthropicImageSource to the URL form
+// OpenAI accepts for image inputs: a data URI for base64 sources, or the
+// original http(s) URL for url sources. Returns "" for unusable sources.
+func anthropicImageSourceToURL(src *AnthropicImageSource) string {
+	if src == nil {
+		return ""
+	}
+	if src.Type == "url" {
+		if isHTTPImageURL(src.URL) {
+			return src.URL
+		}
+		return ""
+	}
+	if src.Data == "" {
 		return ""
 	}
 	mediaType := src.MediaType
@@ -360,6 +370,11 @@ func anthropicImageToDataURI(src *AnthropicImageSource) string {
 		mediaType = "image/png"
 	}
 	return "data:" + mediaType + ";base64," + src.Data
+}
+
+func isHTTPImageURL(u string) bool {
+	lower := strings.ToLower(u)
+	return strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "http://")
 }
 
 // convertToolResultOutput extracts text and image content from a tool_result
@@ -396,7 +411,7 @@ func convertToolResultOutput(b AnthropicContentBlock) (string, []ResponsesConten
 				textParts = append(textParts, ib.Text)
 			}
 		case "image":
-			if uri := anthropicImageToDataURI(ib.Source); uri != "" {
+			if uri := anthropicImageSourceToURL(ib.Source); uri != "" {
 				imageParts = append(imageParts, ResponsesContentPart{Type: "input_image", ImageURL: uri})
 			}
 		}

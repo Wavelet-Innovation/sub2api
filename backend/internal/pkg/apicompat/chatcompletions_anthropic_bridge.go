@@ -25,7 +25,7 @@ import (
 //	Request:  Anthropic Messages → Chat Completions
 //	Response: CC chunk/response → Anthropic events/response
 //
-// Helper functions from the Responses bridges (anthropicImageToDataURI,
+// Helper functions from the Responses bridges (anthropicImageSourceToURL,
 // extractAnthropicTextFromBlocks, fromResponsesCallID, sanitizeAnthropicToolUseInput,
 // parseAnthropicSystemContentParts, isReasoningModel, mapAnthropicEffortToResponses,
 // normalizeToolParameters) are reused so the conversion semantics stay identical.
@@ -216,7 +216,7 @@ func anthropicUserToChatMessages(raw json.RawMessage) ([]ChatMessage, error) {
 				parts = append(parts, ChatContentPart{Type: "text", Text: b.Text})
 			}
 		case "image":
-			if uri := anthropicImageToDataURI(b.Source); uri != "" {
+			if uri := anthropicImageSourceToURL(b.Source); uri != "" {
 				hasImage = true
 				parts = append(parts, ChatContentPart{
 					Type:     "image_url",
