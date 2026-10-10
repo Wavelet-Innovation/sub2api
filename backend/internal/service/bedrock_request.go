@@ -673,20 +673,23 @@ func isBedrockOpus47OrNewer(modelID string) bool {
 	return major > 4 || (major == 4 && minor >= 7)
 }
 
-// isBedrockHaiku55OrNewer 判断 Bedrock 模型 ID 是否为 Claude Haiku 5.5 或更新版本。
-// Haiku 5.5 仅支持 thinking.type: "adaptive"，"enabled" + budget_tokens 返回 400。
-func isBedrockHaiku55OrNewer(modelID string) bool {
-	lower := strings.ToLower(modelID)
-	if !strings.Contains(lower, "haiku") {
-		return false
-	}
-	matches := claudeVersionRe.FindStringSubmatch(lower)
+// bedrockClaudeTierVersionRe 同 claudeVersionRe，额外捕获型号档位（haiku/sonnet/opus）。
+var bedrockClaudeTierVersionRe = regexp.MustCompile(`claude-(haiku|sonnet|opus)-(\d+)(?:[-.](\d+))?`)
+
+// isBedrockAdaptiveOnlyThinking 判断模型是否只接受 thinking.type: "adaptive"
+// （"enabled" + budget_tokens 返回 400）：Opus 4.7+、Sonnet 5.5+、Haiku 5.5+。
+func isBedrockAdaptiveOnlyThinking(modelID string) bool {
+	matches := bedrockClaudeTierVersionRe.FindStringSubmatch(strings.ToLower(modelID))
 	if matches == nil {
 		return false
 	}
-	major, _ := strconv.Atoi(matches[1])
-	minor, _ := strconv.Atoi(matches[2])
-	return major > 5 || (major == 5 && minor >= 5)
+	major, _ := strconv.Atoi(matches[2])
+	minor, _ := strconv.Atoi(matches[3])
+	minMajor, minMinor := 5, 5
+	if matches[1] == "opus" {
+		minMajor, minMinor = 4, 7
+	}
+	return major > minMajor || (major == minMajor && minor >= minMinor)
 }
 
 func isBedrockFable5(modelID string) bool {
@@ -697,7 +700,7 @@ const defaultThinkingBudgetTokens = 10000
 
 // sanitizeBedrockThinking 修复 thinking 字段的 Bedrock 兼容性问题：
 //   - Fable 5: 仅使用 always-on adaptive thinking，不支持手动 budget_tokens
-//   - Opus 4.7+ / Haiku 5.5+: 仅支持 "adaptive"，将 "enabled" 转换为 "adaptive" 并移除 budget_tokens
+//   - Opus 4.7+ / Sonnet 5.5+ / Haiku 5.5+: 仅支持 "adaptive"，将 "enabled" 转换为 "adaptive" 并移除 budget_tokens
 //   - 其他模型: "enabled" 必须带 budget_tokens，缺失时补充默认值
 func sanitizeBedrockThinking(body []byte, modelID string) []byte {
 	thinking := gjson.GetBytes(body, "thinking")
@@ -720,7 +723,7 @@ func sanitizeBedrockThinking(body []byte, modelID string) []byte {
 		return body
 	}
 
-	if isBedrockOpus47OrNewer(modelID) || isBedrockHaiku55OrNewer(modelID) {
+	if isBedrockAdaptiveOnlyThinking(modelID) {
 		if thinkingType == "enabled" {
 			body, _ = sjson.SetBytes(body, "thinking.type", "adaptive")
 			body, _ = sjson.DeleteBytes(body, "thinking.budget_tokens")

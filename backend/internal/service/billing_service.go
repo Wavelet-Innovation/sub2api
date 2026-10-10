@@ -249,6 +249,22 @@ func (s *BillingService) initFallbackPricing() {
 		SupportsCacheBreakdown:     false,
 	}
 
+	// Claude Sonnet 5 官方价格：$2 输入 / $10 输出，5m/1h 缓存写 $2.50/$4，缓存读 $0.20。
+	// 缺少此条时 getFallbackPricing 会掉到 claude-3-5-sonnet（$3/$15）。
+	s.fallbackPrices["claude-sonnet-5"] = &ModelPricing{
+		InputPricePerToken:         2e-6,
+		OutputPricePerToken:        10e-6,
+		CacheCreationPricePerToken: 2.5e-6,
+		CacheCreation5mPrice:       2.5e-6,
+		CacheCreation1hPrice:       4e-6,
+		CacheReadPricePerToken:     0.2e-6,
+		SupportsCacheBreakdown:     true,
+	}
+	// Claude Sonnet 5.5 与 Sonnet 5 同价，但缓存读为输入价的 5%（$0.10）。
+	sonnet55 := *s.fallbackPrices["claude-sonnet-5"]
+	sonnet55.CacheReadPricePerToken = 0.1e-6
+	s.fallbackPrices["claude-sonnet-5.5"] = &sonnet55
+
 	// Claude Haiku 5.5 官方价格：提示 ≤100K token 时 $0.10 输入 / $0.50 输出，
 	// 5m 缓存写 $0.125，1h 缓存写 $0.20，缓存读 $0.01；超过 100K 时整次请求所有价格 ×5。
 	s.fallbackPrices["claude-haiku-5.5"] = &ModelPricing{
@@ -754,6 +770,13 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 		return s.fallbackPrices["claude-3-opus"]
 	}
 	if strings.Contains(modelLower, "sonnet") {
+		// "sonnet-5-5" 必须先于 "sonnet-5" 判；两者都不能用裸 "5" 匹配（claude-sonnet-4-5）。
+		if isClaudeSonnet55Model(modelLower) {
+			return s.fallbackPrices["claude-sonnet-5.5"]
+		}
+		if strings.Contains(modelLower, "sonnet-5") || strings.Contains(modelLower, "sonnet5") {
+			return s.fallbackPrices["claude-sonnet-5"]
+		}
 		if strings.Contains(modelLower, "4") && !strings.Contains(modelLower, "3") {
 			return s.fallbackPrices["claude-sonnet-4"]
 		}
@@ -1348,6 +1371,9 @@ func (s *BillingService) applyModelSpecificPricingPolicy(model string, pricing *
 	if isClaudeHaiku55Model(model) {
 		return applyClaudeHaiku55LongContextPolicy(pricing)
 	}
+	if isClaudeSonnet55Model(model) {
+		return applyClaudeSonnet55CacheReadPolicy(pricing)
+	}
 	normalized := normalizeKnownOpenAICodexModel(model)
 	isGPT56 := isOpenAIGPT56OrGPT6Model(normalized)
 	usesLegacyLongContextPricing := usesOpenAILegacyLongContextPricing(normalized)
@@ -1411,6 +1437,26 @@ func applyClaudeHaiku55LongContextPolicy(pricing *ModelPricing) *ModelPricing {
 	cloned.LongContextInputThreshold = claudeHaiku55LongContextInputThreshold
 	cloned.LongContextInputMultiplier = claudeHaiku55LongContextMultiplier
 	cloned.LongContextOutputMultiplier = claudeHaiku55LongContextMultiplier
+	return &cloned
+}
+
+func isClaudeSonnet55Model(model string) bool {
+	lower := strings.ToLower(model)
+	return strings.Contains(lower, "claude-sonnet-5-5") || strings.Contains(lower, "claude-sonnet-5.5")
+}
+
+// claudeSonnet55CacheReadRatio Sonnet 5.5 缓存读为输入价的 5%（标准为 10%）。
+const claudeSonnet55CacheReadRatio = 0.05
+
+// applyClaudeSonnet55CacheReadPolicy 把 Sonnet 5.5 缓存读价限制在输入价的 5%。
+// LiteLLM 价格表按通用的 10% 写成 $0.20，与官方 $0.10 不符；价格数据修正后本策略不再生效。
+func applyClaudeSonnet55CacheReadPolicy(pricing *ModelPricing) *ModelPricing {
+	want := pricing.InputPricePerToken * claudeSonnet55CacheReadRatio
+	if want <= 0 || pricing.CacheReadPricePerToken <= want {
+		return pricing
+	}
+	cloned := *pricing
+	cloned.CacheReadPricePerToken = want
 	return &cloned
 }
 

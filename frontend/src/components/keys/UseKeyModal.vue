@@ -1351,6 +1351,22 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         }
       }
     },
+    'claude-sonnet-5-5': {
+      name: 'Claude Sonnet 5.5',
+      limit: {
+        context: 1000000,
+        output: 128000
+      },
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      },
+      options: {
+        thinking: {
+          type: 'adaptive'
+        }
+      }
+    },
     'claude-haiku-5-5': {
       name: 'Claude Haiku 5.5',
       limit: {
