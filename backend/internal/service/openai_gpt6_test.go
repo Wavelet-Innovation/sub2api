@@ -86,7 +86,7 @@ func TestGPT6HardcodedFallbackPricing(t *testing.T) {
 			assert.InDelta(t, tt.output, pricing.OutputPricePerToken, 1e-15)
 			assert.InDelta(t, tt.cacheRead, pricing.CacheReadPricePerToken, 1e-15)
 			assert.InDelta(t, tt.cacheWrite, pricing.CacheCreationPricePerToken, 1e-15)
-			assert.InDelta(t, tt.input*4, pricing.InputPricePerTokenPriority, 1e-15)
+			assert.InDelta(t, tt.input*2, pricing.InputPricePerTokenPriority, 1e-15)
 			assert.Equal(t, openAIGPT54LongContextInputThreshold, pricing.LongContextInputThreshold)
 		})
 	}

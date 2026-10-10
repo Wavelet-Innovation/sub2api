@@ -68,6 +68,8 @@ func normalizeKnownOpenAICodexModel(model string) string {
 	}
 
 	switch {
+	case strings.Contains(normalized, "gpt-6.1-sol"):
+		return "gpt-6.1-sol"
 	case strings.Contains(normalized, "gpt-6-astra"):
 		return "gpt-6-astra"
 	case strings.Contains(normalized, "gpt-6-sol"):
@@ -133,8 +135,8 @@ func isOpenAIGPT56Model(model string) bool {
 	return false
 }
 
-// openAIGPT6Models 为 GPT-6 系列的官方型号（无裸 gpt-6 别名）。
-var openAIGPT6Models = []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}
+// openAIGPT6Models 为 GPT-6 系列的官方型号（含 GPT-6.1；无裸 gpt-6 / gpt-6.1 别名）。
+var openAIGPT6Models = []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-6.1-sol"}
 
 // isOpenAIGPT6Model 判断是否 GPT-6 系列模型；入参可为原始模型名或已归一化的基名。
 func isOpenAIGPT6Model(model string) bool {

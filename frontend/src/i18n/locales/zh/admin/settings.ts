@@ -1142,6 +1142,7 @@ export default {
         tierAll: '全部 tier',
         tierPriority: 'priority（fast）',
         tierFlex: 'flex',
+        tierUltrafast: 'ultrafast（6 倍价格）',
         action: '处理方式',
         actionPass: '透传（保留 service_tier）',
         actionFilter: '过滤（移除 service_tier）',

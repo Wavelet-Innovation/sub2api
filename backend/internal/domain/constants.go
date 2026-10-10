@@ -90,6 +90,7 @@ var DefaultAntigravityModelMapping = map[string]string{
 	"claude-opus-4-5-20251101":   "claude-opus-4-6-thinking", // 迁移旧模型
 	"claude-sonnet-4-5-20250929": "claude-sonnet-4-5",
 	// Claude Haiku → Sonnet（无 Haiku 支持）
+	"claude-haiku-5-5":          "claude-sonnet-4-6",
 	"claude-haiku-4-5":          "claude-sonnet-4-6",
 	"claude-haiku-4-5-20251001": "claude-sonnet-4-6",
 	// Gemini 2.5 白名单
@@ -158,6 +159,7 @@ var DefaultBedrockModelMapping = map[string]string{
 	"claude-sonnet-4-5-20250929": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
 	"claude-sonnet-4-20250514":   "us.anthropic.claude-sonnet-4-20250514-v1:0",
 	// Claude Haiku
+	"claude-haiku-5-5":          "anthropic.claude-haiku-5-5",
 	"claude-haiku-4-5":          "us.anthropic.claude-haiku-4-5-20251001-v1:0",
 	"claude-haiku-4-5-20251001": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
 }

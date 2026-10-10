@@ -88,13 +88,13 @@ var (
 	}
 	openAIGPT6AstraFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:                   1e-05,
-		InputCostPerTokenPriority:           4e-05,
+		InputCostPerTokenPriority:           2e-05,
 		OutputCostPerToken:                  5e-05,
-		OutputCostPerTokenPriority:          2e-04,
+		OutputCostPerTokenPriority:          1e-04,
 		CacheCreationInputTokenCost:         1.25e-05,
-		CacheCreationInputTokenCostPriority: 5e-05,
+		CacheCreationInputTokenCostPriority: 2.5e-05,
 		CacheReadInputTokenCost:             1e-06,
-		CacheReadInputTokenCostPriority:     4e-06,
+		CacheReadInputTokenCostPriority:     2e-06,
 		LongContextInputTokenThreshold:      openAIGPT54LongContextInputThreshold,
 		LongContextInputCostMultiplier:      openAIGPT54LongContextInputMultiplier,
 		LongContextOutputCostMultiplier:     openAIGPT54LongContextOutputMultiplier,
@@ -105,13 +105,13 @@ var (
 	}
 	openAIGPT6SolFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:                   2e-06,
-		InputCostPerTokenPriority:           8e-06,
+		InputCostPerTokenPriority:           4e-06,
 		OutputCostPerToken:                  1e-05,
-		OutputCostPerTokenPriority:          4e-05,
+		OutputCostPerTokenPriority:          2e-05,
 		CacheCreationInputTokenCost:         2.5e-06,
-		CacheCreationInputTokenCostPriority: 1e-05,
+		CacheCreationInputTokenCostPriority: 5e-06,
 		CacheReadInputTokenCost:             2e-07,
-		CacheReadInputTokenCostPriority:     8e-07,
+		CacheReadInputTokenCostPriority:     4e-07,
 		LongContextInputTokenThreshold:      openAIGPT54LongContextInputThreshold,
 		LongContextInputCostMultiplier:      openAIGPT54LongContextInputMultiplier,
 		LongContextOutputCostMultiplier:     openAIGPT54LongContextOutputMultiplier,
@@ -122,13 +122,30 @@ var (
 	}
 	openAIGPT6LunaFallbackPricing = &LiteLLMModelPricing{
 		InputCostPerToken:                   1e-07,
-		InputCostPerTokenPriority:           4e-07,
+		InputCostPerTokenPriority:           2e-07,
 		OutputCostPerToken:                  5e-07,
-		OutputCostPerTokenPriority:          2e-06,
+		OutputCostPerTokenPriority:          1e-06,
 		CacheCreationInputTokenCost:         1.25e-07,
-		CacheCreationInputTokenCostPriority: 5e-07,
+		CacheCreationInputTokenCostPriority: 2.5e-07,
 		CacheReadInputTokenCost:             1e-08,
-		CacheReadInputTokenCostPriority:     4e-08,
+		CacheReadInputTokenCostPriority:     2e-08,
+		LongContextInputTokenThreshold:      openAIGPT54LongContextInputThreshold,
+		LongContextInputCostMultiplier:      openAIGPT54LongContextInputMultiplier,
+		LongContextOutputCostMultiplier:     openAIGPT54LongContextOutputMultiplier,
+		SupportsServiceTier:                 true,
+		LiteLLMProvider:                     "openai",
+		Mode:                                "chat",
+		SupportsPromptCaching:               true,
+	}
+	openAIGPT61SolFallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken:                   2e-06,
+		InputCostPerTokenPriority:           4e-06,
+		OutputCostPerToken:                  1e-05,
+		OutputCostPerTokenPriority:          2e-05,
+		CacheCreationInputTokenCost:         2.5e-06,
+		CacheCreationInputTokenCostPriority: 5e-06,
+		CacheReadInputTokenCost:             1e-07,
+		CacheReadInputTokenCostPriority:     2e-07,
 		LongContextInputTokenThreshold:      openAIGPT54LongContextInputThreshold,
 		LongContextInputCostMultiplier:      openAIGPT54LongContextInputMultiplier,
 		LongContextOutputCostMultiplier:     openAIGPT54LongContextOutputMultiplier,
@@ -882,6 +899,7 @@ func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 		{name: "sonnet-4", match: []string{"claude-sonnet-4", "claude-3-5-sonnet"}},
 		{name: "sonnet-3.5", match: []string{"claude-3-5-sonnet", "claude-3.5-sonnet"}},
 		{name: "sonnet-3", match: []string{"claude-3-sonnet"}},
+		{name: "haiku-5.5", match: []string{"claude-haiku-5-5", "claude-haiku-5.5"}, pricing: []string{"claude-haiku-5-5"}},
 		{name: "haiku-3.5", match: []string{"claude-3-5-haiku", "claude-3.5-haiku"}},
 		{name: "haiku-3", match: []string{"claude-3-haiku"}},
 	}
@@ -1012,6 +1030,7 @@ func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 		prefix  string
 		pricing *LiteLLMModelPricing
 	}{
+		{"gpt-6.1-sol", openAIGPT61SolFallbackPricing},
 		{"gpt-6-astra", openAIGPT6AstraFallbackPricing},
 		{"gpt-6-sol", openAIGPT6SolFallbackPricing},
 		{"gpt-6-luna", openAIGPT6LunaFallbackPricing},

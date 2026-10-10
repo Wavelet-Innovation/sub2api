@@ -114,6 +114,10 @@ const (
 	openAIGPT54LongContextInputThreshold   = 272000
 	openAIGPT54LongContextInputMultiplier  = 2.0
 	openAIGPT54LongContextOutputMultiplier = 1.5
+
+	// Claude Haiku 5.5：提示超过 100K token 时，输入、输出、缓存价格均为 5 倍。
+	claudeHaiku55LongContextInputThreshold = 100000
+	claudeHaiku55LongContextMultiplier     = 5.0
 )
 
 func normalizeBillingServiceTier(serviceTier string) string {
@@ -134,6 +138,8 @@ func serviceTierCostMultiplier(serviceTier string) float64 {
 		return 2.0
 	case "flex":
 		return 0.5
+	case "ultrafast":
+		return 6.0
 	default:
 		return 1.0
 	}
@@ -241,6 +247,21 @@ func (s *BillingService) initFallbackPricing() {
 		CacheCreationPricePerToken: 18.75e-6, // $18.75 per MTok
 		CacheReadPricePerToken:     1.5e-6,   // $1.50 per MTok
 		SupportsCacheBreakdown:     false,
+	}
+
+	// Claude Haiku 5.5 官方价格：提示 ≤100K token 时 $0.10 输入 / $0.50 输出，
+	// 5m 缓存写 $0.125，1h 缓存写 $0.20，缓存读 $0.01；超过 100K 时整次请求所有价格 ×5。
+	s.fallbackPrices["claude-haiku-5.5"] = &ModelPricing{
+		InputPricePerToken:          0.1e-6,
+		OutputPricePerToken:         0.5e-6,
+		CacheCreationPricePerToken:  0.125e-6,
+		CacheCreation5mPrice:        0.125e-6,
+		CacheCreation1hPrice:        0.2e-6,
+		CacheReadPricePerToken:      0.01e-6,
+		SupportsCacheBreakdown:      true,
+		LongContextInputThreshold:   claudeHaiku55LongContextInputThreshold,
+		LongContextInputMultiplier:  claudeHaiku55LongContextMultiplier,
+		LongContextOutputMultiplier: claudeHaiku55LongContextMultiplier,
 	}
 
 	// Claude 3 Haiku
@@ -355,42 +376,55 @@ func (s *BillingService) initFallbackPricing() {
 	}
 
 	// OpenAI GPT-6 官方价格（USD/token）。缓存写入为输入价的 1.25 倍，
-	// priority（Fast）为标准价的 4 倍，272K 以上长上下文规则与 GPT-5.4 相同。
+	// priority（Fast）为标准价的 2 倍，272K 以上长上下文规则与 GPT-5.4 相同。
 	s.fallbackPrices["gpt-6-astra"] = &ModelPricing{
 		InputPricePerToken:                 10e-6,
-		InputPricePerTokenPriority:         40e-6,
+		InputPricePerTokenPriority:         20e-6,
 		OutputPricePerToken:                50e-6,
-		OutputPricePerTokenPriority:        200e-6,
+		OutputPricePerTokenPriority:        100e-6,
 		CacheCreationPricePerToken:         12.5e-6,
-		CacheCreationPricePerTokenPriority: 50e-6,
+		CacheCreationPricePerTokenPriority: 25e-6,
 		CacheReadPricePerToken:             1e-6,
-		CacheReadPricePerTokenPriority:     4e-6,
+		CacheReadPricePerTokenPriority:     2e-6,
 		LongContextInputThreshold:          openAIGPT54LongContextInputThreshold,
 		LongContextInputMultiplier:         openAIGPT54LongContextInputMultiplier,
 		LongContextOutputMultiplier:        openAIGPT54LongContextOutputMultiplier,
 	}
 	s.fallbackPrices["gpt-6-sol"] = &ModelPricing{
 		InputPricePerToken:                 2e-6,
-		InputPricePerTokenPriority:         8e-6,
+		InputPricePerTokenPriority:         4e-6,
 		OutputPricePerToken:                10e-6,
-		OutputPricePerTokenPriority:        40e-6,
+		OutputPricePerTokenPriority:        20e-6,
 		CacheCreationPricePerToken:         2.5e-6,
-		CacheCreationPricePerTokenPriority: 10e-6,
+		CacheCreationPricePerTokenPriority: 5e-6,
 		CacheReadPricePerToken:             0.2e-6,
-		CacheReadPricePerTokenPriority:     0.8e-6,
+		CacheReadPricePerTokenPriority:     0.4e-6,
 		LongContextInputThreshold:          openAIGPT54LongContextInputThreshold,
 		LongContextInputMultiplier:         openAIGPT54LongContextInputMultiplier,
 		LongContextOutputMultiplier:        openAIGPT54LongContextOutputMultiplier,
 	}
 	s.fallbackPrices["gpt-6-luna"] = &ModelPricing{
 		InputPricePerToken:                 0.1e-6,
-		InputPricePerTokenPriority:         0.4e-6,
+		InputPricePerTokenPriority:         0.2e-6,
 		OutputPricePerToken:                0.5e-6,
-		OutputPricePerTokenPriority:        2e-6,
+		OutputPricePerTokenPriority:        1e-6,
 		CacheCreationPricePerToken:         0.125e-6,
-		CacheCreationPricePerTokenPriority: 0.5e-6,
+		CacheCreationPricePerTokenPriority: 0.25e-6,
 		CacheReadPricePerToken:             0.01e-6,
-		CacheReadPricePerTokenPriority:     0.04e-6,
+		CacheReadPricePerTokenPriority:     0.02e-6,
+		LongContextInputThreshold:          openAIGPT54LongContextInputThreshold,
+		LongContextInputMultiplier:         openAIGPT54LongContextInputMultiplier,
+		LongContextOutputMultiplier:        openAIGPT54LongContextOutputMultiplier,
+	}
+	s.fallbackPrices["gpt-6.1-sol"] = &ModelPricing{
+		InputPricePerToken:                 2e-6,
+		InputPricePerTokenPriority:         4e-6,
+		OutputPricePerToken:                10e-6,
+		OutputPricePerTokenPriority:        20e-6,
+		CacheCreationPricePerToken:         2.5e-6,
+		CacheCreationPricePerTokenPriority: 5e-6,
+		CacheReadPricePerToken:             0.1e-6,
+		CacheReadPricePerTokenPriority:     0.2e-6,
 		LongContextInputThreshold:          openAIGPT54LongContextInputThreshold,
 		LongContextInputMultiplier:         openAIGPT54LongContextInputMultiplier,
 		LongContextOutputMultiplier:        openAIGPT54LongContextOutputMultiplier,
@@ -726,6 +760,9 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 		return s.fallbackPrices["claude-3-5-sonnet"]
 	}
 	if strings.Contains(modelLower, "haiku") {
+		if isClaudeHaiku55Model(modelLower) {
+			return s.fallbackPrices["claude-haiku-5.5"]
+		}
 		if strings.Contains(modelLower, "3-5") || strings.Contains(modelLower, "3.5") {
 			return s.fallbackPrices["claude-3-5-haiku"]
 		}
@@ -860,7 +897,7 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 	// OpenAI（GPT-5 / Codex 族）：仅匹配已知型号，避免未知 OpenAI 型号误计价。
 	if normalized := normalizeKnownOpenAICodexModel(modelLower); normalized != "" {
 		switch normalized {
-		case "gpt-6-astra", "gpt-6-sol", "gpt-6-luna":
+		case "gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-6.1-sol":
 			return s.fallbackPrices[normalized]
 		case "gpt-5.6-sol":
 			return s.fallbackPrices["gpt-5.6-sol"]
@@ -1308,6 +1345,9 @@ func (s *BillingService) applyModelSpecificPricingPolicy(model string, pricing *
 	if pricing == nil {
 		return nil
 	}
+	if isClaudeHaiku55Model(model) {
+		return applyClaudeHaiku55LongContextPolicy(pricing)
+	}
 	normalized := normalizeKnownOpenAICodexModel(model)
 	isGPT56 := isOpenAIGPT56OrGPT6Model(normalized)
 	usesLegacyLongContextPricing := usesOpenAILegacyLongContextPricing(normalized)
@@ -1353,6 +1393,25 @@ func (s *BillingService) shouldApplySessionLongContextPricing(tokens UsageTokens
 	}
 	totalInputTokens := tokens.InputTokens + tokens.CacheCreationTokens + tokens.CacheReadTokens
 	return totalInputTokens > pricing.LongContextInputThreshold
+}
+
+func isClaudeHaiku55Model(model string) bool {
+	lower := strings.ToLower(model)
+	return strings.Contains(lower, "claude-haiku-5-5") || strings.Contains(lower, "claude-haiku-5.5")
+}
+
+// applyClaudeHaiku55LongContextPolicy 补齐 Haiku 5.5 的 100K 分层价。LiteLLM 价格表把
+// 分层价写在 *_above_100k_tokens 字段里，解析器不读取这些字段，缺少本策略时长提示
+// 只按基础价计费（少收 4/5）。价格数据已显式给出长上下文规则时保持不变。
+func applyClaudeHaiku55LongContextPolicy(pricing *ModelPricing) *ModelPricing {
+	if pricing.LongContextInputThreshold > 0 && pricing.LongContextInputMultiplier > 0 && pricing.LongContextOutputMultiplier > 0 {
+		return pricing
+	}
+	cloned := *pricing
+	cloned.LongContextInputThreshold = claudeHaiku55LongContextInputThreshold
+	cloned.LongContextInputMultiplier = claudeHaiku55LongContextMultiplier
+	cloned.LongContextOutputMultiplier = claudeHaiku55LongContextMultiplier
+	return &cloned
 }
 
 func usesOpenAILegacyLongContextPricing(normalized string) bool {

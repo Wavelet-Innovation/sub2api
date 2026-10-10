@@ -623,6 +623,8 @@ const (
 	OpenAIFastTierAny      = "all"      // 匹配任意已识别的 service_tier
 	OpenAIFastTierPriority = "priority" // 仅匹配 fast（priority）
 	OpenAIFastTierFlex     = "flex"     // 仅匹配 flex
+	// OpenAIFastTierUltrafast 匹配 ultrafast（GPT-6 Astra / GPT-6.1 Sol 支持，价格为标准价 6 倍）
+	OpenAIFastTierUltrafast = "ultrafast"
 
 	// OpenAIFastPolicyActionForcePriority 会保留 service_tier 字段并强制写成
 	// priority，用于把 flex/auto/default/scale 等已识别 tier 收敛为 fast。
@@ -647,14 +649,20 @@ type OpenAIFastPolicySettings struct {
 }
 
 // DefaultOpenAIFastPolicySettings 返回默认的 OpenAI fast 策略配置。
-// 默认对所有 GPT 模型关闭 fast：剥离 service_tier=priority（客户端的 "fast"
-// 别名会先归一化为 priority），请求按普通速度与普通价格处理，而不是报错。
+// 默认对所有 GPT 模型关闭 fast 与 ultrafast：剥离 service_tier=priority（客户端的
+// "fast" 别名会先归一化为 priority）或 ultrafast，请求按普通速度与普通价格处理，而不是报错。
 // flex/auto/default/scale 等其他 tier 与非 GPT 模型保持透传。管理员在
 // admin UI 中保存的配置会完全替换此默认值。
 func DefaultOpenAIFastPolicySettings() *OpenAIFastPolicySettings {
 	return &OpenAIFastPolicySettings{
 		Rules: []OpenAIFastPolicyRule{{
 			ServiceTier:    OpenAIFastTierPriority,
+			Action:         BetaPolicyActionFilter,
+			Scope:          BetaPolicyScopeAll,
+			ModelWhitelist: []string{"gpt-*"},
+			FallbackAction: BetaPolicyActionPass,
+		}, {
+			ServiceTier:    OpenAIFastTierUltrafast,
 			Action:         BetaPolicyActionFilter,
 			Scope:          BetaPolicyScopeAll,
 			ModelWhitelist: []string{"gpt-*"},

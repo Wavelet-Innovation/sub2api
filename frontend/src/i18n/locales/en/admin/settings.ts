@@ -1148,6 +1148,7 @@ export default {
         tierAll: 'All tiers',
         tierPriority: 'priority (fast)',
         tierFlex: 'flex',
+        tierUltrafast: 'ultrafast (6x price)',
         action: 'Action',
         actionPass: 'Pass (keep service_tier)',
         actionFilter: 'Filter (remove service_tier)',
