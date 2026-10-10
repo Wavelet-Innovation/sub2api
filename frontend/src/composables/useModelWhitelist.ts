@@ -100,6 +100,7 @@ const antigravityModels = [
 
 // 智谱 GLM
 const zhipuModels = [
+  'glm-5.3', 'glm-5.3-flash', 'glm-5.2', 'glm-5.1', 'glm-5', 'glm-5-turbo',
   'glm-4', 'glm-4v', 'glm-4-plus', 'glm-4-0520',
   'glm-4-air', 'glm-4-airx', 'glm-4-long', 'glm-4-flash',
   'glm-4v-plus', 'glm-4.5', 'glm-4.6',
@@ -110,6 +111,7 @@ const zhipuModels = [
 
 // 阿里 通义千问
 const qwenModels = [
+  'qwen3.8-max', 'qwen3.8-flash', 'qwen3.7-max', 'qwen3.7-plus',
   'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-longcontext', 'qwen-long',
   'qwen2-72b-instruct', 'qwen2-57b-a14b-instruct', 'qwen2-7b-instruct',
   'qwen2.5-72b-instruct', 'qwen2.5-32b-instruct', 'qwen2.5-14b-instruct',
@@ -121,6 +123,7 @@ const qwenModels = [
 
 // DeepSeek
 const deepseekModels = [
+  'deepseek-v4-pro', 'deepseek-flash',
   'deepseek-chat', 'deepseek-coder', 'deepseek-reasoner',
   'deepseek-v3', 'deepseek-v3-0324',
   'deepseek-r1', 'deepseek-r1-0528',
@@ -193,12 +196,13 @@ const yiModels = [
 
 // Moonshot/Kimi
 const moonshotModels = [
-  'moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k',
-  'kimi-latest'
+  'kimi-k3', 'kimi-k2.7-code', 'kimi-k2.7-code-highspeed', 'kimi-k2.6'
 ]
 
 // 字节跳动 豆包
 const doubaoModels = [
+  'doubao-seed-2-1-pro-260915', 'doubao-seed-2-1-lite-260915', 'doubao-seed-2-1-turbo-260628',
+  'doubao-seed-evolving',
   'doubao-pro-256k', 'doubao-pro-128k', 'doubao-pro-32k', 'doubao-pro-4k',
   'doubao-lite-128k', 'doubao-lite-32k', 'doubao-lite-4k',
   'doubao-vision-pro-32k', 'doubao-vision-lite-32k',
@@ -208,6 +212,7 @@ const doubaoModels = [
 
 // MiniMax
 const minimaxModels = [
+  'MiniMax-M3', 'MiniMax-M2.7', 'MiniMax-M2.7-highspeed',
   'abab6.5-chat', 'abab6.5s-chat', 'abab6.5s-chat-pro',
   'abab6-chat',
   'abab5.5-chat', 'abab5.5s-chat'
