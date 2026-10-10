@@ -34,10 +34,8 @@ var openAIOAuthForeignModelPrefixes = []string{
 	"glm-",
 	"kimi-",
 	"moonshot-",
-	"qwen-",
-	"qwen2-",
-	"qwen3-",
-	"qwen4-",
+	// 通义千问：qwen-/qwen2-/qwen3- 旧命名与 qwen3.7-plus / qwen3.8-max 等点号新命名统一按 qwen 前缀判断。
+	"qwen",
 	"qwq-",
 	"minimax-",
 	"gemini-",

@@ -942,7 +942,10 @@ func TestAPIContracts(t *testing.T) {
 					"openai_codex_client_version_synced": "",
 					"openai_codex_version_auto_sync_enabled": true,
 					"openai_fast_policy_settings": {
-						"rules": []
+						"rules": [
+							{"service_tier": "priority", "action": "filter", "scope": "all", "model_whitelist": ["gpt-*"], "fallback_action": "pass"},
+							{"service_tier": "ultrafast", "action": "filter", "scope": "all", "model_whitelist": ["gpt-*"], "fallback_action": "pass"}
+						]
 					},
 					"custom_menu_items": [],
 					"custom_endpoints": [],
@@ -1247,7 +1250,10 @@ func TestAPIContracts(t *testing.T) {
 					"openai_codex_client_version_synced": "",
 					"openai_codex_version_auto_sync_enabled": true,
 					"openai_fast_policy_settings": {
-						"rules": []
+						"rules": [
+							{"service_tier": "priority", "action": "filter", "scope": "all", "model_whitelist": ["gpt-*"], "fallback_action": "pass"},
+							{"service_tier": "ultrafast", "action": "filter", "scope": "all", "model_whitelist": ["gpt-*"], "fallback_action": "pass"}
+						]
 					},
 					"payment_enabled": false,
 					"payment_min_amount": 0,

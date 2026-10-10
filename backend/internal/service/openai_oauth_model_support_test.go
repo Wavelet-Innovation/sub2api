@@ -133,3 +133,16 @@ func TestIsOpenAIOAuthServableModel(t *testing.T) {
 	require.False(t, isOpenAIOAuthServableModel("provider/k3"))
 	require.True(t, isOpenAIOAuthServableModel("my-k3-alias")) // 非精确 bare ID，自定义别名 fail-open
 }
+
+// Qwen 3.x 新命名用点号（qwen3.8-max / qwen3.7-plus），旧前缀 qwen3- 匹配不上，
+// 会被派给 Codex 账号并以不可重试的 400 失败。其他厂商新型号同样应被排除。
+func TestIsOpenAIOAuthServableModel_NewProviderModels(t *testing.T) {
+	for _, model := range []string{
+		"qwen3.8-max", "qwen3.7-plus", "qwen3.8-flash", "QWEN3.8-MAX-0902",
+		"kimi-k3", "glm-5.3", "deepseek-v4-pro", "deepseek-flash", "MiniMax-M3",
+		"doubao-seed-2-1-pro-260915", "gemini-3.8-flash", "grok-4.7",
+	} {
+		require.False(t, isOpenAIOAuthServableModel(model), model)
+	}
+	require.True(t, isOpenAIOAuthServableModel("gpt-6.1-sol"))
+}
