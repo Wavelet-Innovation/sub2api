@@ -689,13 +689,22 @@ func (s *BillingService) initFallbackPricing() {
 		SupportsCacheBreakdown:  false,
 	}
 
-	// xAI Grok 4.5 (official docs: $2 input / $0.50 cached input / $6 output per MTok)
+	// xAI Grok 4.5 (official docs: $2 input / $0.30 cached input / $6 output per MTok)
 	s.fallbackPrices["grok-4.5"] = &ModelPricing{
+		InputPricePerToken:     2e-6,
+		OutputPricePerToken:    6e-6,
+		CacheReadPricePerToken: 0.3e-6,
+		SupportsCacheBreakdown: false,
+	}
+	// xAI Grok 4.6 / 4.7 (official docs: $2 input / $0.50 cached input / $6 output per MTok).
+	// ≥200K 提示的加价档未配置：Grok 账号不启用长上下文计费（见 IsOpenAILongContextBillingEnabled）。
+	s.fallbackPrices["grok-4.6"] = &ModelPricing{
 		InputPricePerToken:     2e-6,
 		OutputPricePerToken:    6e-6,
 		CacheReadPricePerToken: 0.5e-6,
 		SupportsCacheBreakdown: false,
 	}
+	s.fallbackPrices["grok-4.7"] = s.fallbackPrices["grok-4.6"]
 
 	// xAI Grok 4.3 (official docs: $1.25 input / $2.50 output per MTok)
 	s.fallbackPrices["grok-4.3"] = &ModelPricing{
@@ -948,6 +957,8 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 	switch modelLower {
 	case "grok", "grok-latest", "grok-4.5", "grok-4.5-latest", "grok-build-latest":
 		return s.fallbackPrices["grok-4.5"]
+	case "grok-4.6", "grok-4.7":
+		return s.fallbackPrices[modelLower]
 	case "grok-4.3",
 		"grok-4.20-0309-reasoning",
 		"grok-4.20-0309-non-reasoning",

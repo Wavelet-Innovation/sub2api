@@ -47,6 +47,8 @@ describe('useModelWhitelist', () => {
     const models = getModelsByPlatform('grok')
 
     expect(models).toContain('grok-4.5')
+    expect(models).toContain('grok-4.6')
+    expect(models).toContain('grok-4.7')
     expect(models).toContain('grok-4.5-latest')
     expect(models).toContain('grok-build-latest')
   })

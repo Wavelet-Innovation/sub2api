@@ -496,7 +496,19 @@ func grokChatResponsesCacheIntentBody(body []byte) ([]byte, error) {
 }
 
 func grokChatResponsesRuntimeEligible(upstreamModel, cacheIdentity string) bool {
-	return strings.TrimSpace(upstreamModel) == "grok-4.5" && strings.TrimSpace(cacheIdentity) != ""
+	return isGrokReasoningResponsesModel(upstreamModel) && strings.TrimSpace(cacheIdentity) != ""
+}
+
+// isGrokReasoningResponsesModel 判断上游模型是否为 Grok 4.5 及之后的推理模型
+// （4.5 / 4.6 / 4.7）：推理无法关闭，拒绝 penalty / stop 参数，图片输入需走
+// Responses 运行时才能送达原生视觉能力。
+func isGrokReasoningResponsesModel(upstreamModel string) bool {
+	switch strings.ToLower(strings.TrimSpace(upstreamModel)) {
+	case "grok-4.5", "grok-4.6", "grok-4.7":
+		return true
+	default:
+		return false
+	}
 }
 
 // forwardGrokChatCompletionsViaResponses converts a strictly compatible Chat
@@ -527,7 +539,7 @@ func (s *OpenAIGatewayService) forwardGrokChatCompletionsViaResponses(
 	// for non-composer models, so they would be silently dropped. Route them to
 	// Responses even when no prompt-cache identity is available.
 	hasImageInput := openAIJSONValueMayContainImageInput(gjson.GetBytes(body, "messages"))
-	if !grokChatResponsesRuntimeEligible(upstreamModel, cacheIdentity) && (!hasImageInput || strings.TrimSpace(upstreamModel) != "grok-4.5") {
+	if !grokChatResponsesRuntimeEligible(upstreamModel, cacheIdentity) && (!hasImageInput || !isGrokReasoningResponsesModel(upstreamModel)) {
 		return s.forwardAsRawChatCompletions(ctx, c, account, body, defaultMappedModel)
 	}
 
