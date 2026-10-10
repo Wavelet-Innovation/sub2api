@@ -332,6 +332,24 @@ func (s *BillingService) initFallbackPricing() {
 		SupportsCacheBreakdown: false,
 	}
 
+	// Gemini 3.8 Flash 与 3.6 Flash 同价：正式价 $1.50 / $7.50，缓存读 $0.15。
+	// 2026-12-31 前官方另有半价优惠，由远端价格表提供；此处为远端缺条目时的兜底。
+	s.fallbackPrices["gemini-3.8-flash"] = s.fallbackPrices["gemini-3.6-flash"]
+	// Gemini 3.5 Flash-Lite（$0.30 / $2.50，缓存读 $0.03）
+	s.fallbackPrices["gemini-3.5-flash-lite"] = &ModelPricing{
+		InputPricePerToken:     0.3e-6,
+		OutputPricePerToken:    2.5e-6,
+		CacheReadPricePerToken: 0.03e-6,
+		SupportsCacheBreakdown: false,
+	}
+	// Gemini 3.1 Flash-Lite（$0.25 / $1.50，缓存读 $0.025）
+	s.fallbackPrices["gemini-3.1-flash-lite"] = &ModelPricing{
+		InputPricePerToken:     0.25e-6,
+		OutputPricePerToken:    1.5e-6,
+		CacheReadPricePerToken: 0.025e-6,
+		SupportsCacheBreakdown: false,
+	}
+
 	// OpenAI GPT-5.4（业务指定价格）
 	s.fallbackPrices["gpt-5.4"] = &ModelPricing{
 		InputPricePerToken:             2.5e-6,  // $2.5 per MTok
@@ -809,6 +827,12 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 	}
 	if strings.Contains(modelLower, "gemini-3.6-flash") || strings.Contains(modelLower, "gemini-3-6-flash") {
 		return s.fallbackPrices["gemini-3.6-flash"]
+	}
+	// Flash-Lite 必须先于同版本 Flash 判断（"gemini-3.8-flash" 不是 lite 的子串，但保持一致的顺序）。
+	for _, name := range []string{"gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"} {
+		if strings.Contains(modelLower, name) && !strings.Contains(modelLower, "image") {
+			return s.fallbackPrices[name]
+		}
 	}
 
 	// DeepSeek V4 系列：仅匹配已知 V4 Pro/Flash 与官方兼容别名
