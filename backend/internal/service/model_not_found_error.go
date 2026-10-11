@@ -2,6 +2,7 @@ package service
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -44,6 +45,21 @@ func isOpenAICodexPlanGatedModelError(statusCode int, body []byte) bool {
 		return false
 	}
 	return strings.Contains(normalized, openAICodexPlanGatedModelPhrase)
+}
+
+// openAICodexPlanGatedModelNamePattern captures the model the upstream actually
+// rejected. It can differ from the client-requested model when the gateway
+// injects its own model, e.g. the host text model of an OAuth images request.
+var openAICodexPlanGatedModelNamePattern = regexp.MustCompile(`(?i)the '([^']+)' model is not supported when using codex`)
+
+// extractOpenAICodexPlanGatedModel returns the model named in a Codex
+// plan-gated rejection, or "" when the body does not name one.
+func extractOpenAICodexPlanGatedModel(body []byte) string {
+	m := openAICodexPlanGatedModelNamePattern.FindSubmatch(body)
+	if len(m) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(string(m[1]))
 }
 
 func containsModelNotFoundKeyword(normalizedBody string) bool {

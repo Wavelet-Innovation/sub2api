@@ -2055,6 +2055,17 @@ func (s *RateLimitService) HandleUpstreamModelNotFound(ctx context.Context, acco
 	if modelKey == "" {
 		return false
 	}
+	if hostModel := codexPlanGatedGatewayHostModel(reason, requestedModel, modelKey, responseBody); hostModel != "" {
+		// 被拒的是网关注入的宿主模型：冷却记到宿主模型上，且不 failover——
+		// 换号只会得到同一个 400。
+		resetAt := time.Now().Add(cooldown)
+		if err := s.accountRepo.SetModelRateLimit(ctx, account.ID, hostModel, resetAt, reason); err != nil {
+			slog.Warn("upstream_model_not_found_set_model_rate_limit_failed", "account_id", account.ID, "model", hostModel, "reason", reason, "error", err)
+			return false
+		}
+		slog.Warn("codex_plan_gated_gateway_host_model_rejected", "account_id", account.ID, "requested_model", requestedModel, "host_model", hostModel, "reset_at", resetAt)
+		return false
+	}
 	if shouldSkipCodexPlanGatedImageModelCooldown(ctx, reason, requestedModel, modelKey) {
 		return true
 	}
@@ -2065,6 +2076,30 @@ func (s *RateLimitService) HandleUpstreamModelNotFound(ctx context.Context, acco
 	}
 	slog.Info("upstream_model_not_found_model_rate_limited", "account_id", account.ID, "model", modelKey, "reason", reason, "reset_at", resetAt)
 	return true
+}
+
+// codexPlanGatedGatewayHostModel 识别"上游拒绝的不是客户端请求的模型"这一形态。
+//
+// OAuth 账号生图时，网关把图片请求改写成"宿主文本模型 + image_generation 工具"
+// 发给 Codex（openAIImagesResponsesMainModel）。宿主模型被上游下线时，400 点名
+// 的是宿主模型；若照旧把冷却记到图片模型上，会把账号对该图片模型错误下线 30
+// 分钟，客户端只能看到 "no available accounts"。
+//
+// 仅在请求的是图片模型、而被拒的是非图片模型时成立，避免把文本模型的别名/规范化
+// 差异（如 "gpt5.6 sol" → "gpt-5.6-sol"）误判为宿主模型。返回被拒的宿主模型，
+// 不适用时返回 ""。
+func codexPlanGatedGatewayHostModel(reason, requestedModel, modelKey string, body []byte) string {
+	if reason != upstreamCodexPlanGatedModelReason {
+		return ""
+	}
+	if !IsGPTImageGenerationModel(requestedModel) && !IsGPTImageGenerationModel(modelKey) {
+		return ""
+	}
+	rejected := extractOpenAICodexPlanGatedModel(body)
+	if rejected == "" || IsGPTImageGenerationModel(rejected) {
+		return ""
+	}
+	return rejected
 }
 
 // shouldSkipCodexPlanGatedImageModelCooldown 判断这次 Codex plan-gated 400 是否

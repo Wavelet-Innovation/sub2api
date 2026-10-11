@@ -525,3 +525,47 @@ func TestRateLimitService_HandleUpstreamError_ModelNotFoundImageModelStillCoolsD
 	require.Len(t, repo.modelRateLimitCalls, 1, "守卫只作用于 codex plan-gated 分支")
 	require.Equal(t, upstreamModelNotFoundReason, repo.modelRateLimitCalls[0].reason)
 }
+
+// OAuth 生图时网关会把请求改写成"宿主文本模型 + image_generation 工具"发给 Codex。
+// 上游拒绝的若是这个网关注入的宿主模型（而非客户端请求的图片模型），错误与账号、
+// 与图片模型都无关：
+//   - 不能把冷却记到图片模型上，否则账号会被错误地对该图片模型下线 30 分钟；
+//   - 冷却记到上游实际点名的宿主模型上，归因准确；
+//   - 不 failover：换任何账号都会得到同一个 400，只会白白放大上游请求。
+func TestRateLimitService_HandleUpstreamError_CodexPlanGatedHostModelOnImagesEndpointAttributesToHostModel(t *testing.T) {
+	for _, imageModel := range []string{"gpt-image-2", "gpt-image-2.5"} {
+		t.Run(imageModel, func(t *testing.T) {
+			repo := &modelNotFoundAccountRepoStub{}
+			svc := &RateLimitService{accountRepo: repo}
+			account := openAICodexPlanGatedOAuthAccount()
+
+			handled := svc.HandleUpstreamError(
+				WithOpenAIImagesEndpoint(context.Background()),
+				account,
+				http.StatusBadRequest,
+				http.Header{},
+				[]byte(`{"detail":"The 'gpt-5.4-mini' model is not supported when using Codex with a ChatGPT account."}`),
+				imageModel,
+			)
+
+			require.False(t, handled, "宿主模型被拒与账号无关，不应 failover")
+			require.Len(t, repo.modelRateLimitCalls, 1)
+			require.Equal(t, "gpt-5.4-mini", repo.modelRateLimitCalls[0].scope,
+				"冷却必须记到上游点名的宿主模型，而不是客户端请求的图片模型")
+			require.Equal(t, upstreamCodexPlanGatedModelReason, repo.modelRateLimitCalls[0].reason)
+			require.Zero(t, repo.tempCalls)
+		})
+	}
+}
+
+func TestExtractOpenAICodexPlanGatedModel(t *testing.T) {
+	cases := map[string]string{
+		`{"detail":"The 'gpt-5.4-mini' model is not supported when using Codex with a ChatGPT account."}`:           "gpt-5.4-mini",
+		`{"error":{"message":"The 'GPT-Image-2' model is not supported when using Codex with a ChatGPT account."}}`: "GPT-Image-2",
+		`{"detail":"model is not supported when using Codex"}`:                                                      "",
+		`not json at all`: "",
+	}
+	for body, want := range cases {
+		require.Equal(t, want, extractOpenAICodexPlanGatedModel([]byte(body)), body)
+	}
+}
